@@ -35,6 +35,8 @@ static void audio_read_callback(int type, int64_t pts, int64_t dts, uint8_t *dat
             break;
         case STREAM_TYPE_AUDIO_MPEG2:
             // printf("STREAM_TYPE_AUDIO_MPEG2\n");
+        case STREAM_TYPE_AUDIO_AAC_LATM:
+            // printf("STREAM_TYPE_AUDIO_AAC_LATM\n");
             break;
         default:
             return;
