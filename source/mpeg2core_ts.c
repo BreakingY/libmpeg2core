@@ -258,6 +258,8 @@ int mpeg2_ts_packet_demuxer(mpeg2_ts_context *context, uint8_t *buffer, int len)
             case STREAM_TYPE_AUDIO_MPEG1:
             case STREAM_TYPE_AUDIO_MPEG2:
             case STREAM_TYPE_AUDIO_AAC_LATM:
+            case STREAM_TYPE_AUDIO_G711A:
+            case STREAM_TYPE_AUDIO_G711U:
                 if(mpeg2_ts_audio_parse(context, pmt_stream.stream_type) < 0){
                     return -1;
                 }
@@ -454,6 +456,8 @@ static int mpeg2_ts_pack(mpeg2_ts_context *context, int type, int psi_flag){
         case STREAM_TYPE_AUDIO_MPEG1:
         case STREAM_TYPE_AUDIO_MPEG2:
         case STREAM_TYPE_AUDIO_AAC_LATM:
+        case STREAM_TYPE_AUDIO_G711A:
+        case STREAM_TYPE_AUDIO_G711U:
             if(mpeg2_ts_media_pack(context, type, PID_AUDIO) < 0){
                 return -1;
             }
@@ -570,6 +574,8 @@ int mpeg2_ts_packet_muxer(mpeg2_ts_context *context, uint8_t *buffer, int len, i
         case STREAM_TYPE_AUDIO_MPEG1:
         case STREAM_TYPE_AUDIO_MPEG2:
         case STREAM_TYPE_AUDIO_AAC_LATM:
+        case STREAM_TYPE_AUDIO_G711A:
+        case STREAM_TYPE_AUDIO_G711U:
             pes_header.PTS_DTS_flags = 2; // only pts
             pes_header.dts = 0;
             context->dts = 0;

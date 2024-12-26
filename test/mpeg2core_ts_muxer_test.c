@@ -63,6 +63,12 @@ static void media_write_callback(int type, uint8_t *data, int data_len, void *ar
         case STREAM_TYPE_AUDIO_AAC_LATM:
             // printf("STREAM_TYPE_AUDIO_AAC_LATM\n");
             break;
+        case STREAM_TYPE_AUDIO_G711A:
+            // printf("STREAM_TYPE_AUDIO_G711A\n");
+            break;
+        case STREAM_TYPE_AUDIO_G711U:
+            // printf("STREAM_TYPE_AUDIO_G711U\n");
+            break;
         case STREAM_TYPE_VIDEO_H264:
             // printf("STREAM_TYPE_VIDEO_H264\n");
             break;

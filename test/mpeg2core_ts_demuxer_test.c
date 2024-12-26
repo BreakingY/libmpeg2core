@@ -38,6 +38,12 @@ static void audio_read_callback(int type, int64_t pts, int64_t dts, uint8_t *dat
         case STREAM_TYPE_AUDIO_AAC_LATM:
             // printf("STREAM_TYPE_AUDIO_AAC_LATM\n");
             break;
+        case STREAM_TYPE_AUDIO_G711A:
+            // printf("STREAM_TYPE_AUDIO_G711A\n");
+            break;
+        case STREAM_TYPE_AUDIO_G711U:
+            // printf("STREAM_TYPE_AUDIO_G711U\n");
+            break;
         default:
             return;
             break;
