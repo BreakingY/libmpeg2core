@@ -71,7 +71,10 @@ int mpeg2_pat_parse(mpeg2_ts_context *context){
         for(int i = 0; i < context->pat.program_array_num; i++){
             mpeg2_program program = context->pat.program_array[i];
             uint16_t pmt_pid = program.program_map_pid;
-            context->pmt_array[context->pmt_array_num++].pid = pmt_pid;
+            uint16_t program_number = program.program_number;
+            context->pmt_array[context->pmt_array_num].pid = pmt_pid;
+            context->pmt_array[context->pmt_array_num].program_number = program_number;
+            context->pmt_array_num++;
         }
     }
     return 0;

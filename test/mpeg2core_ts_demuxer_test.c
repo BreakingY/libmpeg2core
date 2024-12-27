@@ -1,8 +1,13 @@
 #include "mpeg2core_common.h"
 #include "mpeg2core_ts.h"
+static int save_program_number = -1; // test only save one program
 static char *h26x_filename = "test_out.h26x"; 
 static FILE *h26x_fd = NULL;
-static void video_read_callback(int type, int64_t pts, int64_t dts, uint8_t *data, int data_len, void *arg){
+static void video_read_callback(int program_number, int type, int64_t pts, int64_t dts, uint8_t *data, int data_len, void *arg){
+    printf("program_number:%d\n",program_number);
+    if(save_program_number = -1){
+        save_program_number = program_number;
+    }
     switch (type){
         case STREAM_TYPE_VIDEO_H264:
             // printf("STREAM_TYPE_VIDEO_H264\n");
@@ -25,7 +30,10 @@ static void video_read_callback(int type, int64_t pts, int64_t dts, uint8_t *dat
 }
 static char *aac_filename = "test_out.aac"; 
 static FILE *aac_fd = NULL;
-static void audio_read_callback(int type, int64_t pts, int64_t dts, uint8_t *data, int data_len, void *arg){
+static void audio_read_callback(int program_number, int type, int64_t pts, int64_t dts, uint8_t *data, int data_len, void *arg){
+    if(save_program_number = -1){
+        save_program_number = program_number;
+    }
     switch (type){
         case STREAM_TYPE_AUDIO_AAC:
             // printf("STREAM_TYPE_AUDIO_AAC\n");
@@ -105,7 +113,7 @@ int ts_demuxer_test(int argc, char **argv){
         //     printf("PCR:%" PRIu64 "\n", context->ts_header.PCR);
         // }
         // dump_ts_header(context->ts_header);
-        // dump_pmt_array(context->pmt_array, context->pmt_array_num);
+        dump_pmt_array(context->pmt_array, context->pmt_array_num);
         memset(buffer, 0, ts_packet_length + 1);
     }
     free(buffer);

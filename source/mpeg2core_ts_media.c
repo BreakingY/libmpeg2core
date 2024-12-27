@@ -18,7 +18,7 @@ int mpeg2_ts_audio_parse(mpeg2_ts_context *context, int type){
             return -1;
         }
         if(context->audio_read_callback && (media_pos > 0)){
-            context->audio_read_callback(type, pes_header.pts, pes_header.dts, context->pes_buffer_a + media_pos, context->pes_buffer_pos_a - media_pos, context->arg);
+            context->audio_read_callback(context->pmt.program_number, type, pes_header.pts, pes_header.dts, context->pes_buffer_a + media_pos, context->pes_buffer_pos_a - media_pos, context->arg);
         }
         context->pes_buffer_pos_a = 0;
     }
@@ -41,7 +41,7 @@ int mpeg2_ts_video_parse(mpeg2_ts_context *context, int type){
             return -1;
         }
         if(context->video_read_callback && (media_pos > 0)){
-            context->video_read_callback(type, pes_header.pts, pes_header.dts, context->pes_buffer_v + media_pos, context->pes_buffer_pos_v - media_pos, context->arg);
+            context->video_read_callback(context->pmt.program_number, type, pes_header.pts, pes_header.dts, context->pes_buffer_v + media_pos, context->pes_buffer_pos_v - media_pos, context->arg);
         }
         context->pes_buffer_pos_v = 0;
     }

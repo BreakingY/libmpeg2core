@@ -91,6 +91,7 @@ typedef struct mpeg2_pmt_st{
     int pmt_stream_array_num;
     int pmt_ready;
     uint16_t pid;
+    uint16_t program_number; // from pat
 }mpeg2_pmt;
 
 // TS adaptation header
@@ -134,8 +135,8 @@ typedef struct mpeg2_ts_header_st{
     int payload_len;
 }mpeg2_ts_header;
 // pts dts video timebase: 90000, audio timebase: sampling rate
-typedef void (*VideoReadCallback)(int/*STREAM_TYPE_VIDEO_xxx, mpeg2core_type.h*/, int64_t/*pts*/, int64_t/*dts*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
-typedef void (*AudioReadCallback)(int/*STREAM_TYPE_AUDIO_xxx, mpeg2core_type.h*/, int64_t/*pts*/, int64_t/*dts*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
+typedef void (*VideoReadCallback)(int/*program_number*/, int/*STREAM_TYPE_VIDEO_xxx, mpeg2core_type.h*/, int64_t/*pts*/, int64_t/*dts*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
+typedef void (*AudioReadCallback)(int/*program_number*/, int/*STREAM_TYPE_AUDIO_xxx, mpeg2core_type.h*/, int64_t/*pts*/, int64_t/*dts*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
 typedef void (*MediaWriteCallback)(int/*STREAM_TYPE_xxx_xxx, mpeg2core_type.h*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
 
 typedef struct mpeg2_ts_context_st{
@@ -145,7 +146,7 @@ typedef struct mpeg2_ts_context_st{
     mpeg2_pmt pmt_array[PAT_PROGARM_MAX];
     int pmt_array_num;
     int current_pmt_idx;
-    mpeg2_pmt pmt; // pmt_array[0] libmpeg2core only receive one stream, default pmt_array[0]
+    mpeg2_pmt pmt; // The currently unpacked program
 
     // rebuild section
     mpeg2_section_header section_header; // the section header of the current TS packet

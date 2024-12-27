@@ -246,33 +246,37 @@ int mpeg2_ts_packet_demuxer(mpeg2_ts_context *context, uint8_t *buffer, int len)
             }
         }
     }
-    context->pmt = context->pmt_array[0];
     // media
-    for(int i = 0; i < context->pmt.pmt_stream_array_num; i++){
-        mpeg2_pmt_stream pmt_stream = context->pmt.pmt_stream_array[i];
-        if(ts_header.pid != pmt_stream.elementary_PID){
-            continue;
+    for(int pmt_idx = 0; pmt_idx < context->pmt_array_num; pmt_idx++){
+        context->current_pmt_idx = pmt_idx;
+        context->pmt = context->pmt_array[pmt_idx];
+        for(int i = 0; i < context->pmt.pmt_stream_array_num; i++){
+            mpeg2_pmt_stream pmt_stream = context->pmt.pmt_stream_array[i];
+            if(ts_header.pid != pmt_stream.elementary_PID){
+                continue;
+            }
+            switch (pmt_stream.stream_type){
+                case STREAM_TYPE_AUDIO_AAC:
+                case STREAM_TYPE_AUDIO_MPEG1:
+                case STREAM_TYPE_AUDIO_MPEG2:
+                case STREAM_TYPE_AUDIO_AAC_LATM:
+                case STREAM_TYPE_AUDIO_G711A:
+                case STREAM_TYPE_AUDIO_G711U:
+                    if(mpeg2_ts_audio_parse(context, pmt_stream.stream_type) < 0){
+                        return -1;
+                    }
+                    break;
+                case STREAM_TYPE_VIDEO_H264:
+                case STREAM_TYPE_VIDEO_HEVC:
+                    if(mpeg2_ts_video_parse(context, pmt_stream.stream_type) < 0){
+                        return -1;
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
-        switch (pmt_stream.stream_type){
-            case STREAM_TYPE_AUDIO_AAC:
-            case STREAM_TYPE_AUDIO_MPEG1:
-            case STREAM_TYPE_AUDIO_MPEG2:
-            case STREAM_TYPE_AUDIO_AAC_LATM:
-            case STREAM_TYPE_AUDIO_G711A:
-            case STREAM_TYPE_AUDIO_G711U:
-                if(mpeg2_ts_audio_parse(context, pmt_stream.stream_type) < 0){
-                    return -1;
-                }
-                break;
-            case STREAM_TYPE_VIDEO_H264:
-            case STREAM_TYPE_VIDEO_HEVC:
-                if(mpeg2_ts_video_parse(context, pmt_stream.stream_type) < 0){
-                    return -1;
-                }
-                break;
-            default:
-                break;
-        }
+        
     }
     return 0;
 }
