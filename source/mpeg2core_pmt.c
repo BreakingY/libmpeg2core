@@ -70,23 +70,20 @@ int mpeg2_pmt_parse(mpeg2_ts_context *context){
     }
     return 0;
 }
-int mpeg2_pmt_pack(mpeg2_ts_context *context, uint8_t *buffer, int len){
-    if((buffer == NULL) || (context == NULL)){
+int mpeg2_pmt_pack(mpeg2_pmt pmt, uint8_t *buffer, int len){
+    if(buffer == NULL){
         return -1;
     }
-    int media_cnt = 0;
-    if(context->video_type != STREAM_TYPE_VIDEO_NONE){
-        media_cnt ++;
-    }
-    if(context->audio_type != STREAM_TYPE_AUDIO_NONE){
-        media_cnt ++;
-    }
+    int media_cnt = pmt.pmt_stream_array_num;
     // section
     mpeg2_section_header section_header;
     memset(&section_header, 0, sizeof(mpeg2_section_header));
     section_header.table_id = TID_PMT;
     section_header.section_length = 5/*section:transport_stream_id-->last_section_number*/ + 4/*reserved1-->program_info_length*/ + (5 * media_cnt)/*stream_type-->ES_info_length*/ + 4/*CRC_32*/;
-    section_header.transport_stream_id = PROGRAM;
+    if((TS_PACKET_LENGTH_188 - TS_FIXED_HEADER_LEN - section_header.section_length - 3/*table_id-->section_length*/) < 0){ // too long, too many streams
+        return -1;
+    }
+    section_header.transport_stream_id = pmt.program_number;
     section_header.section_number = 0;
     section_header.last_section_number = 0;
     int ret = mpeg2_section_header_pack(buffer, len, section_header);
@@ -96,16 +93,8 @@ int mpeg2_pmt_pack(mpeg2_ts_context *context, uint8_t *buffer, int len){
     // reserved1
     buffer[ret] = 0;
     // PCR_PID
-    if(context->video_type != STREAM_TYPE_VIDEO_NONE){
-        buffer[ret] = (PID_VIDEO & 0x1f00) >> 8;
-        buffer[ret + 1] = PID_VIDEO & 0xff;
-        context->pcr_pid = PID_VIDEO;
-    }
-    else if(context->audio_type != STREAM_TYPE_AUDIO_NONE){
-        buffer[ret] = (PID_AUDIO & 0x1f00) >> 8;
-        buffer[ret + 1] = PID_AUDIO & 0xff;
-        context->pcr_pid = PID_AUDIO;
-    }
+    buffer[ret] = (pmt.pcr_pid & 0x1f00) >> 8;
+    buffer[ret + 1] = pmt.pcr_pid & 0xff;
     ret += 2;
     // reserved2
     buffer[ret] = 0;
@@ -113,30 +102,15 @@ int mpeg2_pmt_pack(mpeg2_ts_context *context, uint8_t *buffer, int len){
     buffer[ret] = 0;
     buffer[ret + 1] = 0;
     ret += 2;
-    if(context->video_type != STREAM_TYPE_VIDEO_NONE){
-        buffer[ret] = context->video_type;
+    for(int i = 0; i < pmt.pmt_stream_array_num; i++){
+        mpeg2_pmt_stream pmt_stream =  pmt.pmt_stream_array[i];
+        buffer[ret] = pmt_stream.stream_type;
         ret++;
-         // reserved1
+        // reserved1
         buffer[ret] = 0;
-        // elementary_PID video
-        buffer[ret] = (PID_VIDEO & 0x1f00) >> 8;
-        buffer[ret + 1] = PID_VIDEO & 0xff;
-        ret += 2;
-        // reserved2
-        buffer[ret] = 0;
-        // ES_info_length
-        buffer[ret] = 0;
-        buffer[ret + 1] = 0;
-        ret += 2;
-    }
-    if(context->audio_type != STREAM_TYPE_AUDIO_NONE){
-        buffer[ret] = context->audio_type;
-        ret++;
-         // reserved1
-        buffer[ret] = 0;
-        // elementary_PID video
-        buffer[ret] = (PID_AUDIO & 0x1f00) >> 8;
-        buffer[ret + 1] = PID_AUDIO & 0xff;
+        // elementary_PID
+        buffer[ret] = (pmt_stream.elementary_PID & 0x1f00) >> 8;
+        buffer[ret + 1] = pmt_stream.elementary_PID & 0xff;
         ret += 2;
         // reserved2
         buffer[ret] = 0;

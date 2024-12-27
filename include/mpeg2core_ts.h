@@ -76,6 +76,9 @@ typedef struct mpeg2_pmt_stream_st{
     uint8_t reserved2;
     uint16_t ES_info_length;
     uint8_t descriptor[BUFFER_MAX_BYTES];
+
+    int stream_continuity_counter;
+    int frame_cnt;
 }mpeg2_pmt_stream;
 typedef struct mpeg2_pmt_st{
     uint8_t section_number_array[SECTION_COUNT_MAX];
@@ -89,9 +92,12 @@ typedef struct mpeg2_pmt_st{
     uint8_t descriptor[BUFFER_MAX_BYTES];
     mpeg2_pmt_stream pmt_stream_array[PMT_STREAM_MAX];
     int pmt_stream_array_num;
+
     int pmt_ready;
     uint16_t pid;
-    uint16_t program_number; // from pat
+    uint16_t program_number;
+    uint16_t pcr_pid;
+    int pmt_continuity_counter;
 }mpeg2_pmt;
 
 // TS adaptation header
@@ -135,9 +141,9 @@ typedef struct mpeg2_ts_header_st{
     int payload_len;
 }mpeg2_ts_header;
 // pts dts video timebase: 90000, audio timebase: sampling rate
-typedef void (*VideoReadCallback)(int/*program_number*/, int/*STREAM_TYPE_VIDEO_xxx, mpeg2core_type.h*/, int64_t/*pts*/, int64_t/*dts*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
-typedef void (*AudioReadCallback)(int/*program_number*/, int/*STREAM_TYPE_AUDIO_xxx, mpeg2core_type.h*/, int64_t/*pts*/, int64_t/*dts*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
-typedef void (*MediaWriteCallback)(int/*STREAM_TYPE_xxx_xxx, mpeg2core_type.h*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
+typedef void (*VideoReadCallback)(int/*program number*/, int/*stream pid*/, int/*STREAM_TYPE_VIDEO_xxx, mpeg2core_type.h*/, int64_t/*pts*/, int64_t/*dts*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
+typedef void (*AudioReadCallback)(int/*program number*/, int/*stream pid*/, int/*STREAM_TYPE_AUDIO_xxx, mpeg2core_type.h*/, int64_t/*pts*/, int64_t/*dts*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
+typedef void (*MediaWriteCallback)(int/*program number psi/si == 0*/, int/*stream pid psi/si == 0*/, int/*STREAM_TYPE_xxx_xxx, mpeg2core_type.h psi/si == 0*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
 
 typedef struct mpeg2_ts_context_st{
     mpeg2_ts_header ts_header;
@@ -168,18 +174,13 @@ typedef struct mpeg2_ts_context_st{
 
     // only TS muxer
     uint8_t ts_buffer[TS_PACKET_LENGTH_188];
-    int video_type;
-    int audio_type;
     uint8_t frame_buffer[PES_MAX_BYTES]; // video frame cache
     int frame_buffer_len;
     int audio_frame_cnt;
     int video_frame_cnt;
     int psi_flag; // generate PAT PMT
     int pat_continuity_counter;
-    int pmt_continuity_counter;
     int sdt_continuity_counter;
-    int video_continuity_counter;
-    int audio_continuity_counter;
     int key_flag; // generate random_access_indicator
     int64_t pts;
     int64_t dts;
@@ -187,8 +188,7 @@ typedef struct mpeg2_ts_context_st{
     int64_t last_dts;
     int pcr_period;
     int pat_period;
-    int pcr_start_flag;
-    int pcr_pid;
+    int total_streams;
 
 }mpeg2_ts_context;
 
@@ -201,6 +201,7 @@ void dump_program(mpeg2_pat pat);
 void dump_pmt_array(mpeg2_pmt *pmt_array, int pmt_array_num);
 /**
  * TS demuxer API
+ * not thread safe
  */
 /**
  * set read callback
@@ -223,6 +224,7 @@ int mpeg2_ts_packet_demuxer(mpeg2_ts_context *context, uint8_t *buffer, int len)
 
 /**
  * TS muxer API
+ * not thread safe
  */
 /**
  * set write callback
@@ -234,23 +236,44 @@ int mpeg2_ts_packet_demuxer(mpeg2_ts_context *context, uint8_t *buffer, int len)
 void mpeg2_set_write_callback(mpeg2_ts_context *context, MediaWriteCallback media_write_callback, void *arg);
 
 /**
- * set media type
- * @param[in] context       created by create_ts_context()
- * @param[in] video_type    STREAM_TYPE_VIDEO_XXX(mpeg2core_type.h), If have not, pass in STREAM_TYPE_VIDEO_NONE
- * @param[in] audio_type    STREAM_TYPE_AUDIO_XXX(mpeg2core_type.h), If have not, pass in STREAM_TYPE_AUDIO_NONE
- * @param return            void
+ * add one program
+ * @param[in] context           created by create_ts_context()
+ * @param[in] program_number    program_number(1 2 3 ...) 
+ * @param[in] info              program descriptor info // TODO
+ * @param[in] len               len of info
+ * @param return                0:ok <0:error
  */
-void mpeg2_set_media_type(mpeg2_ts_context *context, int video_type, int audio_type);
+int mpeg2_ts_add_program(mpeg2_ts_context *context, uint16_t program_number, uint8_t* info, int len);
+
+/**
+ * remove one program
+ * @param[in] context           created by create_ts_context()
+ * @param[in] program_number    program_number(1 2 3 ...) 
+ * @param return                0:ok <0:error
+ */
+int mpeg2_ts_remove_program(mpeg2_ts_context *context, uint16_t program_number);
+
+/**
+ * remove one program
+ * @param[in] context           created by create_ts_context()
+ * @param[in] program_number    program_number(1 2 3 ...) 
+ * @param[in] stream_type       STREAM_TYPE_VIDEO_XXX(mpeg2core_type.h), STREAM_TYPE_AUDIO_XXX(mpeg2core_type.h)
+ * @param[in] stream_info       stream descriptor info // TODO
+ * @param[in] stream_info_len   stream descriptor info len
+ * @param return                stream pid:ok <0:error
+ */
+int mpeg2_ts_add_program_stream(mpeg2_ts_context *context, uint16_t program_number, int stream_type, uint8_t* stream_info, int stream_info_len);
 
 /**
  * muxer TS packet
- * @param[in] context   created by create_ts_context()
- * @param[in] buffer    video(only one h264 h265 NALU) or audio data
- * @param[in] len       size of buffer
- * @param[in] type      media type, STREAM_TYPE_xxx_xxx, mpeg2core_type.h
- * @param[in] pts       pts millisecond in video timebase: 90000 or millisecond in audio timebase: sampling rate
- * @param[in] dts       dts millisecond in video timebase: 90000 or millisecond in audio timebase: sampling rate
- * @param return        0:ok <0:error
+ * @param[in] context       created by create_ts_context()
+ * @param[in] stream_pid    stream pid, returned by mpeg2_ts_add_program_stream()
+ * @param[in] buffer        video(only one h264 h265 NALU) or audio data
+ * @param[in] len           size of buffer
+ * @param[in] type          stream type, STREAM_TYPE_xxx_xxx, mpeg2core_type.h
+ * @param[in] pts           pts millisecond in video timebase: 90000 or millisecond in audio timebase: sampling rate
+ * @param[in] dts           dts millisecond in video timebase: 90000 or millisecond in audio timebase: sampling rate
+ * @param return            0:ok <0:error
  */
-int mpeg2_ts_packet_muxer(mpeg2_ts_context *context, uint8_t *buffer, int len, int type, int64_t pts, int64_t dts);
+int mpeg2_ts_packet_muxer(mpeg2_ts_context *context, int stream_pid, uint8_t *buffer, int len, int type, int64_t pts, int64_t dts);
 #endif

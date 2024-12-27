@@ -48,9 +48,9 @@ static int getFrameFromH264File(FILE *fp, uint8_t *frame, int size)
 // timestamp_s = second * sampling_rate
 static int time_base_convert(int64_t timestamp_ms, int sampling_rate){
     return timestamp_ms * (sampling_rate / 1000);
-}
-static void media_write_callback(int type, uint8_t *data, int data_len, void *arg){
-    switch (type){
+} 
+static void media_write_callback(int program_number, int stream_pid, int stream_type, uint8_t *data, int data_len, void *arg){
+    switch (stream_type){
         case STREAM_TYPE_AUDIO_AAC:
             // printf("STREAM_TYPE_AUDIO_AAC\n");
             break;
@@ -76,7 +76,7 @@ static void media_write_callback(int type, uint8_t *data, int data_len, void *ar
             // printf("STREAM_TYPE_VIDEO_HEVC\n");
             break;
         default:
-            return;
+            // printf("PSI SI\n");
             break;
     }
     FILE *ts_fd = (FILE *)arg;
@@ -85,7 +85,9 @@ static void media_write_callback(int type, uint8_t *data, int data_len, void *ar
     }
     return;
 }
-int ts_muxer_h26x_test(const char *file, int stream_type){
+// STREAM_TYPE_VIDEO_H264 STREAM_TYPE_VIDEO_H265
+int ts_muxer_h26x_test(const char *file, int stream_type_h26x){
+    uint16_t program_number = 1;
     FILE *fp = fopen(file, "r");
     if(fp == NULL){
         printf("file not exist\n");
@@ -102,7 +104,15 @@ int ts_muxer_h26x_test(const char *file, int stream_type){
         exit(0);
     }
     mpeg2_set_write_callback(context, media_write_callback, ts_fd);
-    mpeg2_set_media_type(context, stream_type, STREAM_TYPE_AUDIO_NONE);
+    if(mpeg2_ts_add_program(context, program_number, NULL, 0) < 0){
+        printf("mpeg2_ts_add_program error\n");
+        exit(0);
+    }
+    int stream_pid_h26x = mpeg2_ts_add_program_stream(context, program_number, stream_type_h26x, NULL, 0);
+    if(stream_pid_h26x < 0){
+        printf("mpeg2_ts_add_program_stream error\n");
+        exit(0);
+    }
     uint8_t frame[BUFFER];
     int frame_size = 0;
     int fps = 25;
@@ -118,13 +128,13 @@ int ts_muxer_h26x_test(const char *file, int stream_type){
             printf("read over\n");
             break;
         }
-        if(mpeg2_ts_packet_muxer(context, frame, frame_size, stream_type, time_base_convert(pts, 90000), time_base_convert(dts, 90000)) < 0){
+        if(mpeg2_ts_packet_muxer(context, stream_pid_h26x, frame, frame_size, stream_type_h26x, time_base_convert(pts, 90000), time_base_convert(dts, 90000)) < 0){
             printf("mpeg2_ts_packet_muxer error\n");
         }
         start_code = get_start_code(frame, frame_size);
         int type;
         // Only I/P/B frames and new access units add pts
-        switch (stream_type){
+        switch (stream_type_h26x){
             case STREAM_TYPE_VIDEO_H264:
                 type = frame[start_code] & 0x1f;
                 if((type == 5) || (type == 1)){
@@ -151,6 +161,10 @@ int ts_muxer_h26x_test(const char *file, int stream_type){
         
         // printf("type:%d frame_size:%d pts:%d dts:%d\n", type, frame_size, time_base_convert(pts, 90000), time_base_convert(dts, 90000));
         last = time_base_convert(pts, 90000);
+    }
+    if(mpeg2_ts_remove_program(context, program_number) < 0){
+        printf("mpeg2_ts_remove_program error\n");
+        exit(0);
     }
     destroy_ts_context(context);
     if(ts_fd){
@@ -227,6 +241,7 @@ static int ParseAdtsHeader(uint8_t *in, int len, adts_header *res){
     return 0;
 }
 int ts_muxer_aac_test(const char *file){
+    uint16_t program_number = 1;
     FILE *fp = fopen(file, "r");
     if(fp == NULL){
         printf("file not exist\n");
@@ -244,7 +259,15 @@ int ts_muxer_aac_test(const char *file){
         exit(0);
     }
     mpeg2_set_write_callback(context, media_write_callback, ts_fd);
-    mpeg2_set_media_type(context, STREAM_TYPE_VIDEO_NONE, STREAM_TYPE_AUDIO_AAC);
+    if(mpeg2_ts_add_program(context, program_number, NULL, 0) < 0){
+        printf("mpeg2_ts_add_program error\n");
+        exit(0);
+    }
+    int stream_pid_aac = mpeg2_ts_add_program_stream(context, program_number, STREAM_TYPE_AUDIO_AAC, NULL, 0);
+    if(stream_pid_aac < 0){
+        printf("mpeg2_ts_add_program_stream error\n");
+        exit(0);
+    }
     uint8_t frame[4 * 1024];
     int64_t pts = 0;
     int64_t dts = pts;
@@ -269,13 +292,17 @@ int ts_muxer_aac_test(const char *file){
             break;
         }
         
-        if(mpeg2_ts_packet_muxer(context, frame, header.aac_frame_length, STREAM_TYPE_AUDIO_AAC, pts, dts) < 0){
+        if(mpeg2_ts_packet_muxer(context, stream_pid_aac, frame, header.aac_frame_length, STREAM_TYPE_AUDIO_AAC, pts, dts) < 0){
             printf("mpeg2_ts_packet_muxer error\n");
         }
         // fwrite(frame, 1, header.aac_frame_length, aac_fd);
         pts += 2048; // timebase-->sample
         dts = pts;
         // printf("pts:%lld time_base_convert(pts, sample):%lld\n",pts, time_base_convert(pts, sample));
+    }
+    if(mpeg2_ts_remove_program(context, program_number) < 0){
+        printf("mpeg2_ts_remove_program error\n");
+        exit(0);
     }
     destroy_ts_context(context);
     if(ts_fd){

@@ -3,7 +3,7 @@
 #include "mpeg2core_common.h"
 static uint8_t h264_nalu_aud[6] = {0x00, 0x00, 0x00, 0x01, 0x09, 0xF0};
 static uint8_t h265_nalu_aud[7] = {0x00, 0x00, 0x00, 0x01, 0x46, 0x01, 0x50};
-int mpeg2_ts_audio_parse(mpeg2_ts_context *context, int type){
+int mpeg2_ts_audio_parse(mpeg2_ts_context *context, int type, int stream_pid){
     if(context == NULL){
         return -1;
     }
@@ -18,7 +18,7 @@ int mpeg2_ts_audio_parse(mpeg2_ts_context *context, int type){
             return -1;
         }
         if(context->audio_read_callback && (media_pos > 0)){
-            context->audio_read_callback(context->pmt.program_number, type, pes_header.pts, pes_header.dts, context->pes_buffer_a + media_pos, context->pes_buffer_pos_a - media_pos, context->arg);
+            context->audio_read_callback(context->pmt.program_number, stream_pid, type, pes_header.pts, pes_header.dts, context->pes_buffer_a + media_pos, context->pes_buffer_pos_a - media_pos, context->arg);
         }
         context->pes_buffer_pos_a = 0;
     }
@@ -26,7 +26,7 @@ int mpeg2_ts_audio_parse(mpeg2_ts_context *context, int type){
     context->pes_buffer_pos_a += context->ts_header.payload_len;
     return 0;
 }
-int mpeg2_ts_video_parse(mpeg2_ts_context *context, int type){
+int mpeg2_ts_video_parse(mpeg2_ts_context *context, int type, int stream_pid){
     if(context == NULL){
         return -1;
     }
@@ -41,7 +41,7 @@ int mpeg2_ts_video_parse(mpeg2_ts_context *context, int type){
             return -1;
         }
         if(context->video_read_callback && (media_pos > 0)){
-            context->video_read_callback(context->pmt.program_number, type, pes_header.pts, pes_header.dts, context->pes_buffer_v + media_pos, context->pes_buffer_pos_v - media_pos, context->arg);
+            context->video_read_callback(context->pmt.program_number, stream_pid, type, pes_header.pts, pes_header.dts, context->pes_buffer_v + media_pos, context->pes_buffer_pos_v - media_pos, context->arg);
         }
         context->pes_buffer_pos_v = 0;
     }
@@ -49,54 +49,81 @@ int mpeg2_ts_video_parse(mpeg2_ts_context *context, int type){
     context->pes_buffer_pos_v += context->ts_header.payload_len;
     return 0;
 }
-
-int mpeg2_ts_media_pack(mpeg2_ts_context *context, int type, int media_pid){
+int mpeg2_is_video(int stream_type){
+    switch (stream_type){
+        case STREAM_TYPE_AUDIO_AAC:
+        case STREAM_TYPE_AUDIO_MPEG1:
+        case STREAM_TYPE_AUDIO_MPEG2:
+        case STREAM_TYPE_AUDIO_AAC_LATM:
+        case STREAM_TYPE_AUDIO_G711A:
+        case STREAM_TYPE_AUDIO_G711U:
+            break;
+        case STREAM_TYPE_VIDEO_H264:
+        case STREAM_TYPE_VIDEO_HEVC:
+            return 1;
+            break;
+        default:
+            break;
+    }
+    return 0;
+}
+int mpeg2_is_audio(int stream_type){
+    switch (stream_type){
+        case STREAM_TYPE_AUDIO_AAC:
+        case STREAM_TYPE_AUDIO_MPEG1:
+        case STREAM_TYPE_AUDIO_MPEG2:
+        case STREAM_TYPE_AUDIO_AAC_LATM:
+        case STREAM_TYPE_AUDIO_G711A:
+        case STREAM_TYPE_AUDIO_G711U:
+            return 1;
+            break;
+        case STREAM_TYPE_VIDEO_H264:
+        case STREAM_TYPE_VIDEO_HEVC:
+            break;
+        default:
+            break;
+    }
+    return 0;
+}
+int mpeg2_ts_media_pack(mpeg2_ts_context *context, mpeg2_pmt *pmt, mpeg2_pmt_stream *pmt_stream){
     if(!context){
         return -1;
     }
     uint8_t *ptr = NULL;
     int ptr_len = 0;
     int pos = 0;
-    int frame_cnt = 0;
-    if(media_pid == PID_AUDIO){
+    if(mpeg2_increase_stream_frame_cnt(context, pmt_stream->elementary_PID, &pmt, &pmt_stream) < 0){
+        return -1;
+    }
+    int frame_cnt = pmt_stream->frame_cnt;
+    int pcr_flag = 0;
+    if(mpeg2_is_audio(pmt_stream->stream_type)){
         ptr = context->pes_buffer_a;
         ptr_len = context->pes_buffer_pos_a;
     }
-    else if(media_pid == PID_VIDEO){
+    else if(mpeg2_is_video(pmt_stream->stream_type)){
         ptr = context->pes_buffer_v;
         ptr_len = context->pes_buffer_pos_v;
     }
     else{
         return -1;
     }
-    if(context->pcr_pid == PID_AUDIO){
-        frame_cnt = context->audio_frame_cnt;
-    }
-    else if(context->pcr_pid == PID_VIDEO){
-        frame_cnt = context->video_frame_cnt;
+    if((pmt_stream->elementary_PID == pmt->pcr_pid) && ((frame_cnt % context->pcr_period == 0) || (frame_cnt == 0))){
+        pcr_flag = 1;
     }
     mpeg2_ts_header ts_header;
     memset(&ts_header, 0, sizeof(mpeg2_ts_header));
     ts_header.sync_byte = 0x47;
     ts_header.transport_error_indicator = 0;
     ts_header.payload_unit_start_indicator = 1;
-    ts_header.pid = media_pid;
+    ts_header.pid = pmt_stream->elementary_PID;
     ts_header.transport_priority = 0;
     ts_header.transport_scrambling_control = 0;
-    if(media_pid == PID_AUDIO){
-        ts_header.continuity_counter = context->audio_continuity_counter;
-    }
-    else{
-        ts_header.continuity_counter = context->video_continuity_counter;
-    }
+    ts_header.continuity_counter = pmt_stream->stream_continuity_counter;
     int ts_header_len = 0;
     int stuffing_bytes = 0;
     int available_bytes = sizeof(context->ts_buffer) - 4/*ts fixed len*/ - 2/*adaptation fixed header len*/;
-    int pcr_flag = 0;
-    if((media_pid == context->pcr_pid) && ((frame_cnt % context->pcr_period == 0) || (context->pcr_start_flag == 0))){
-        pcr_flag = 1;
-        context->pcr_start_flag = 1;
-    }
+    
     if(pcr_flag){
         available_bytes -= 6/*PCR*/;
     }
@@ -125,19 +152,10 @@ int mpeg2_ts_media_pack(mpeg2_ts_context *context, int type, int media_pid){
         memcpy(context->ts_buffer + ts_header_len + stuffing_bytes, ptr, ptr_len);
         memset(context->ts_buffer + ts_header_len, 0xff, stuffing_bytes);
         if(context->media_write_callback){
-            context->media_write_callback(type, context->ts_buffer, sizeof(context->ts_buffer), context->arg);
+            context->media_write_callback(pmt->program_number, pmt_stream->elementary_PID, pmt_stream->stream_type, context->ts_buffer, sizeof(context->ts_buffer), context->arg);
         }
-        if(media_pid == PID_AUDIO){
-            context->audio_continuity_counter++;
-            if(context->audio_continuity_counter > 0x0f){
-                context->audio_continuity_counter = 0;
-            }
-        }
-        else{
-            context->video_continuity_counter++;
-            if(context->video_continuity_counter > 0x0f){
-                context->video_continuity_counter = 0;
-            }
+        if(mpeg2_increase_stream_continuity_counter(context, pmt_stream->elementary_PID, &pmt, &pmt_stream) < 0){
+            return -1;
         }
     }
     else{ // Split into multiple packages
@@ -188,22 +206,12 @@ int mpeg2_ts_media_pack(mpeg2_ts_context *context, int type, int media_pid){
             memset(context->ts_buffer + ts_header_len, 0xff, stuffing_bytes);
             
             if(context->media_write_callback){
-                context->media_write_callback(type, context->ts_buffer, sizeof(context->ts_buffer), context->arg);
+                context->media_write_callback(pmt->program_number, pmt_stream->elementary_PID, pmt_stream->stream_type, context->ts_buffer, sizeof(context->ts_buffer), context->arg);
             }
-            if(media_pid == PID_AUDIO){
-                context->audio_continuity_counter++;
-                if(context->audio_continuity_counter > 0x0f){
-                    context->audio_continuity_counter = 0;
-                }
-                ts_header.continuity_counter = context->audio_continuity_counter;
+            if(mpeg2_increase_stream_continuity_counter(context, pmt_stream->elementary_PID, &pmt, &pmt_stream) < 0){
+                return -1;
             }
-            else{
-                context->video_continuity_counter++;
-                if(context->video_continuity_counter > 0x0f){
-                    context->video_continuity_counter = 0;
-                }
-                ts_header.continuity_counter = context->video_continuity_counter;
-            }
+            ts_header.continuity_counter = pmt_stream->stream_continuity_counter;
             if((spilt_over == 1) || (pos >= ptr_len)){
                 break;
             }

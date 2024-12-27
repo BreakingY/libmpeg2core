@@ -79,7 +79,7 @@ int mpeg2_pat_parse(mpeg2_ts_context *context){
     }
     return 0;
 }
-int mpeg2_pat_pack(uint8_t *buffer, int len){
+int mpeg2_pat_pack(mpeg2_pat pat, uint8_t *buffer, int len){
     if(buffer == NULL){
         return -1;
     }
@@ -87,7 +87,10 @@ int mpeg2_pat_pack(uint8_t *buffer, int len){
     mpeg2_section_header section_header;
     memset(&section_header, 0, sizeof(mpeg2_section_header));
     section_header.table_id = TID_PAT;
-    section_header.section_length = 5/*section:transport_stream_id-->last_section_number*/ + 4/*program*/ + 4/*CRC_32*/;
+    section_header.section_length = 5/*section:transport_stream_id-->last_section_number*/ + 4 * pat.program_array_num/*program*/ + 4/*CRC_32*/;
+    if((TS_PACKET_LENGTH_188 - TS_FIXED_HEADER_LEN - section_header.section_length - 3/*table_id-->section_length*/) < 0){ // too long, too many programs
+        return -1;
+    }
     section_header.transport_stream_id = TRANSPORT_STREAM_ID;
     section_header.section_number = 0;
     section_header.last_section_number = 0;
@@ -95,15 +98,19 @@ int mpeg2_pat_pack(uint8_t *buffer, int len){
     if(ret < 0){
         return -1;
     }
-    // program_number
-    buffer[ret] = (PROGRAM & 0xff00) >> 8;
-    buffer[ret + 1] = PROGRAM & 0xff;
-    ret += 2;
-    // reserved\program_map_pid
-    buffer[ret] = 0;
-    buffer[ret] = (PID_PMT & 0x1f00) >> 8;
-    buffer[ret + 1] = PID_PMT & 0xff;
-    ret += 2;
+    for(int i = 0; i < pat.program_array_num; i++){
+        int program_number = pat.program_array[i].program_number;
+        int program_map_pid = pat.program_array[i].program_map_pid;
+        // program_number
+        buffer[ret] = (program_number & 0xff00) >> 8;
+        buffer[ret + 1] = program_number & 0xff;
+        ret += 2;
+        // reserved\program_map_pid
+        buffer[ret] = 0;
+        buffer[ret] = (program_map_pid & 0x1f00) >> 8;
+        buffer[ret + 1] = program_map_pid & 0xff;
+        ret += 2;
+    }
     //CRC_32
     uint32_t crc_32 = mpeg2core_crc32(0xffffffff, buffer, ret);
     buffer[ret] = crc_32 & 0xff;

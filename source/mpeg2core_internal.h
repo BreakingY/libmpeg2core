@@ -10,6 +10,7 @@
  */
 #define INITIAL_VERSION     0xff
 #define SECTION_HEADER_SIZE 8
+#define TS_FIXED_HEADER_LEN 4
 struct PCR
 {
     uint8_t pcr_base32_25:8;
@@ -61,19 +62,33 @@ int mpeg2_pat_parse(mpeg2_ts_context *context);
 int mpeg2_pmt_parse(mpeg2_ts_context *context);
 
 // media 0:ok <0:error
-int mpeg2_ts_video_parse(mpeg2_ts_context *context, int type);
-int mpeg2_ts_audio_parse(mpeg2_ts_context *context, int type);
+int mpeg2_ts_video_parse(mpeg2_ts_context *context, int type, int stream_pid);
+int mpeg2_ts_audio_parse(mpeg2_ts_context *context, int type, int stream_pid);
 
 /**
  * muxer
  */
 #define TRANSPORT_STREAM_ID 1
 #define PID_PMT             0x1000
-#define PID_VIDEO           0x0100
-#define PID_AUDIO           0x0101
-#define PROGRAM             1
+#define PID_MEDIA           0x0100
+// #define PID_VIDEO           0x0100
+// #define PID_AUDIO           0x0101
+// #define PROGRAM             1
 #define PCR_DELAY           0 //(700 * 90) // 700ms
 #define SERVICE_NAME        "Breaking/libmpeg2core"
+
+// 0:not 1:is type:STREAM_TYPE_XXX_XXX
+int mpeg2_is_video(int stream_type);
+int mpeg2_is_audio(int stream_type);
+
+// 0:ok <0:error
+int mpeg2_find_pmt(mpeg2_ts_context *context, int stream_pid, mpeg2_pmt **pmt, mpeg2_pmt_stream **pmt_stream);
+
+// 0:ok <0:error
+int mpeg2_increase_stream_frame_cnt(mpeg2_ts_context *context, int stream_pid, mpeg2_pmt **pmt, mpeg2_pmt_stream **pmt_stream);
+
+// 0:ok <0:error
+int mpeg2_increase_stream_continuity_counter(mpeg2_ts_context *context, int stream_pid, mpeg2_pmt **pmt, mpeg2_pmt_stream **pmt_stream);
 
 // return bytes:ok <0:error
 int mpeg2_ts_header_pack(uint8_t *buffer, int len, mpeg2_ts_header ts_header, int psi_si, int stuffing_bytes);
@@ -85,13 +100,13 @@ int mpeg2_section_header_pack(uint8_t *buffer, int len, mpeg2_section_header sec
 int mpeg2_sdt_pack(uint8_t *buffer, int len);
 
 // return bytes:ok <0:error
-int mpeg2_pat_pack(uint8_t *buffer, int len);
+int mpeg2_pat_pack(mpeg2_pat pat, uint8_t *buffer, int len);
 
 // return bytes:ok <0:error
-int mpeg2_pmt_pack(mpeg2_ts_context *context, uint8_t *buffer, int len);
+int mpeg2_pmt_pack(mpeg2_pmt pmt, uint8_t *buffer, int len);
 
 // 0:ok <0:error
-int mpeg2_ts_media_pack(mpeg2_ts_context *context, int type, int media_pid);
+int mpeg2_ts_media_pack(mpeg2_ts_context *context, mpeg2_pmt *pmt, mpeg2_pmt_stream *pmt_stream);
 
 // return bytes
 int mpeg2_add_h264_aud(uint8_t *buffer, int len);
