@@ -11,7 +11,6 @@ int mpeg2_ts_audio_parse(mpeg2_ts_context *context, int type, int stream_pid){
         return 0;
     }
     if(context->ts_header.payload_unit_start_indicator == 1){ // pointer_field only in the first package
-        // pes解析
         mpeg2_pes_header pes_header;
         int media_pos = 0;
         if(mpeg2_pes_packet_parse(&pes_header, context->pes_buffer_a, context->pes_buffer_pos_a, &media_pos) < 0){
@@ -34,7 +33,6 @@ int mpeg2_ts_video_parse(mpeg2_ts_context *context, int type, int stream_pid){
         return 0;
     }
     if(context->ts_header.payload_unit_start_indicator == 1){ // pointer_field only in the first package
-        // pes解析
         mpeg2_pes_header pes_header;
         int media_pos = 0;
         if(mpeg2_pes_packet_parse(&pes_header, context->pes_buffer_v, context->pes_buffer_pos_v, &media_pos) < 0){
