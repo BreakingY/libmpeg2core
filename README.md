@@ -1,5 +1,5 @@
 # libmpeg2core
-mpeg2 ts ps muxer/demuxer, H264/H265/MPEG1 audio/MPEG2 audio/AAC/AAC_LATM/G711.
+mpeg2 ts ps muxer/demuxer, H264/H265/MPEG1 audio/MP3/AAC/AAC_LATM/G711.
 # TS
 * mkdir build
 * cd build

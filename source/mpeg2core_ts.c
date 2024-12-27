@@ -251,7 +251,7 @@ int mpeg2_ts_packet_demuxer(mpeg2_ts_context *context, uint8_t *buffer, int len)
             switch (pmt_stream.stream_type){
                 case STREAM_TYPE_AUDIO_AAC:
                 case STREAM_TYPE_AUDIO_MPEG1:
-                case STREAM_TYPE_AUDIO_MPEG2:
+                case STREAM_TYPE_AUDIO_MP3:
                 case STREAM_TYPE_AUDIO_AAC_LATM:
                 case STREAM_TYPE_AUDIO_G711A:
                 case STREAM_TYPE_AUDIO_G711U:
@@ -572,7 +572,7 @@ static int mpeg2_ts_pack(mpeg2_ts_context *context, mpeg2_pmt *pmt, mpeg2_pmt_st
     switch (stream_type){
         case STREAM_TYPE_AUDIO_AAC:
         case STREAM_TYPE_AUDIO_MPEG1:
-        case STREAM_TYPE_AUDIO_MPEG2:
+        case STREAM_TYPE_AUDIO_MP3:
         case STREAM_TYPE_AUDIO_AAC_LATM:
         case STREAM_TYPE_AUDIO_G711A:
         case STREAM_TYPE_AUDIO_G711U:
@@ -692,7 +692,7 @@ int mpeg2_ts_packet_muxer(mpeg2_ts_context *context, int stream_pid, uint8_t *bu
     switch (type){
         case STREAM_TYPE_AUDIO_AAC:
         case STREAM_TYPE_AUDIO_MPEG1:
-        case STREAM_TYPE_AUDIO_MPEG2:
+        case STREAM_TYPE_AUDIO_MP3:
         case STREAM_TYPE_AUDIO_AAC_LATM:
         case STREAM_TYPE_AUDIO_G711A:
         case STREAM_TYPE_AUDIO_G711U:

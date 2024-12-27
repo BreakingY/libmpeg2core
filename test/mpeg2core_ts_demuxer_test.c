@@ -42,8 +42,8 @@ static void audio_read_callback(int program_number, int stream_pid, int type, in
         case STREAM_TYPE_AUDIO_MPEG1:
             // printf("STREAM_TYPE_AUDIO_MPEG1\n");
             break;
-        case STREAM_TYPE_AUDIO_MPEG2:
-            // printf("STREAM_TYPE_AUDIO_MPEG2\n");
+        case STREAM_TYPE_AUDIO_MP3:
+            // printf("STREAM_TYPE_AUDIO_MP3\n");
         case STREAM_TYPE_AUDIO_AAC_LATM:
             // printf("STREAM_TYPE_AUDIO_AAC_LATM\n");
             break;
