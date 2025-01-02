@@ -18,7 +18,7 @@ mpeg2_ts_context *create_ts_context(){
     context->pat_period = 25; // frames
     return context;
 }
-void mpeg2_set_read_callback(mpeg2_ts_context *context, VideoReadCallback video_read_callback, AudioReadCallback audio_read_callback, void *arg){
+void mpeg2_ts_set_read_callback(mpeg2_ts_context *context, TSVideoReadCallback video_read_callback, TSAudioReadCallback audio_read_callback, void *arg){
     if(!context){
         return;
     }
@@ -27,7 +27,7 @@ void mpeg2_set_read_callback(mpeg2_ts_context *context, VideoReadCallback video_
     context->arg = arg;
     return;
 }
-void mpeg2_set_write_callback(mpeg2_ts_context *context, MediaWriteCallback media_write_callback, void *arg){
+void mpeg2_ts_set_write_callback(mpeg2_ts_context *context, TSMediaWriteCallback media_write_callback, void *arg){
     if(!context){
         return;
     }

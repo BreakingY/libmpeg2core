@@ -7,8 +7,6 @@
 #include "mpeg2core_type.h"
 
 #define SECTION_MAX_BYTES   4096
-#define BUFFER_MAX_BYTES    4096
-#define PES_MAX_BYTES       2 * 1024 * 1024
 #define SECTION_COUNT_MAX   255 
 #define PAT_PROGARM_MAX     512
 #define PMT_STREAM_MAX      256
@@ -36,7 +34,7 @@ typedef struct mpeg2_sdt_info_st{
     uint8_t running_status;
     uint8_t free_CA_mode;
     uint16_t descriptor_loop_length;
-    uint8_t descriptor[BUFFER_MAX_BYTES];
+    uint8_t descriptor[DESC_BUFFER_MAX_BYTES];
 }mpeg2_sdt_info;
 typedef struct mpeg2_sdt_st{
     uint8_t section_number_array[SECTION_COUNT_MAX];
@@ -75,7 +73,7 @@ typedef struct mpeg2_pmt_stream_st{
     uint16_t elementary_PID;
     uint8_t reserved2;
     uint16_t ES_info_length;
-    uint8_t descriptor[BUFFER_MAX_BYTES];
+    uint8_t descriptor[DESC_BUFFER_MAX_BYTES];
 
     int stream_continuity_counter;
     int frame_cnt;
@@ -89,7 +87,7 @@ typedef struct mpeg2_pmt_st{
     uint16_t PCR_PID;
     uint8_t reserved2;
     uint16_t program_info_length;
-    uint8_t descriptor[BUFFER_MAX_BYTES];
+    uint8_t descriptor[DESC_BUFFER_MAX_BYTES];
     mpeg2_pmt_stream pmt_stream_array[PMT_STREAM_MAX];
     int pmt_stream_array_num;
 
@@ -141,9 +139,9 @@ typedef struct mpeg2_ts_header_st{
     int payload_len;
 }mpeg2_ts_header;
 // pts dts video timebase: 90000, audio timebase: sampling rate
-typedef void (*VideoReadCallback)(int/*program number*/, int/*stream pid*/, int/*STREAM_TYPE_VIDEO_xxx, mpeg2core_type.h*/, int64_t/*pts*/, int64_t/*dts*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
-typedef void (*AudioReadCallback)(int/*program number*/, int/*stream pid*/, int/*STREAM_TYPE_AUDIO_xxx, mpeg2core_type.h*/, int64_t/*pts*/, int64_t/*dts*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
-typedef void (*MediaWriteCallback)(int/*program number psi/si == 0*/, int/*stream pid psi/si == 0*/, int/*STREAM_TYPE_xxx_xxx, mpeg2core_type.h psi/si == 0*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
+typedef void (*TSVideoReadCallback)(int/*program number*/, int/*stream pid*/, int/*STREAM_TYPE_VIDEO_xxx, mpeg2core_type.h*/, int64_t/*pts*/, int64_t/*dts*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
+typedef void (*TSAudioReadCallback)(int/*program number*/, int/*stream pid*/, int/*STREAM_TYPE_AUDIO_xxx, mpeg2core_type.h*/, int64_t/*pts*/, int64_t/*dts*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
+typedef void (*TSMediaWriteCallback)(int/*program number psi/si == 0*/, int/*stream pid psi/si == 0*/, int/*STREAM_TYPE_xxx_xxx, mpeg2core_type.h psi/si == 0*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
 
 typedef struct mpeg2_ts_context_st{
     mpeg2_ts_header ts_header;
@@ -166,9 +164,9 @@ typedef struct mpeg2_ts_context_st{
     uint8_t pes_buffer_a[PES_MAX_BYTES];
     int pes_buffer_pos_a;
 
-    VideoReadCallback video_read_callback;
-    AudioReadCallback audio_read_callback;
-    MediaWriteCallback media_write_callback;
+    TSVideoReadCallback video_read_callback;
+    TSAudioReadCallback audio_read_callback;
+    TSMediaWriteCallback media_write_callback;
     void *arg;
     int write_init;
 
@@ -211,7 +209,7 @@ void dump_pmt_array(mpeg2_pmt *pmt_array, int pmt_array_num);
  * @param[in] arg                   user arg
  * @param return                    void
  */
-void mpeg2_set_read_callback(mpeg2_ts_context *context, VideoReadCallback video_read_callback, AudioReadCallback audio_read_callback, void *arg);
+void mpeg2_ts_set_read_callback(mpeg2_ts_context *context, TSVideoReadCallback video_read_callback, TSAudioReadCallback audio_read_callback, void *arg);
 
 /**
  * parse TS packet
@@ -233,7 +231,7 @@ int mpeg2_ts_packet_demuxer(mpeg2_ts_context *context, uint8_t *buffer, int len)
  * @param[in] arg                   user arg
  * @param return                    void
  */
-void mpeg2_set_write_callback(mpeg2_ts_context *context, MediaWriteCallback media_write_callback, void *arg);
+void mpeg2_ts_set_write_callback(mpeg2_ts_context *context, TSMediaWriteCallback media_write_callback, void *arg);
 
 /**
  * add one program

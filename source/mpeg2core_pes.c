@@ -1,4 +1,5 @@
 #include "mpeg2core_pes.h"
+#include "mpeg2core_type.h"
 int mpeg2_pes_packet_parse(mpeg2_pes_header *pes_header, uint8_t *buffer, int len, int *media_pos){
     if(pes_header == NULL ){
         return -1;
@@ -12,7 +13,7 @@ int mpeg2_pes_packet_parse(mpeg2_pes_header *pes_header, uint8_t *buffer, int le
         return -1;
     }
     idx += 3;
-    pes_header->stream_id = buffer[idx]; // PES_VIDEO or PES_AUDIO
+    pes_header->stream_id = buffer[idx]; // PES_VIDEO\PES_VIDEO_PRIVATE or PES_AUDIO\PES_AUDIO_PRIVATE
     idx++;
     pes_header->PES_packet_length = (buffer[idx] << 8) |  buffer[idx + 1];
     idx += 2;
@@ -143,4 +144,145 @@ int mpeg2_pes_packet_pack(mpeg2_pes_header pes_header, uint8_t *buffer, int buff
     memcpy(buffer + idx, frame, frame_len);
     idx += frame_len;
     return idx;
+}
+
+/**
+ * PS only
+ */
+// ISO/IEC 11172-1 
+// 2.4.3.3 Packet Layer (p20)
+/*
+packet() {
+	packet_start_code_prefix							24 bslbf
+	stream_id											8 uimsbf
+	packet_length										16 uimsbf
+	if (packet_start_code != private_stream_2) { // private_stream_1	= 0xBD,  private_stream_2	= 0xBF
+		while (nextbits() == '1')
+			stuffing_byte								8 bslbf
+
+		if (nextbits () == '01') {
+			'01'										2 bslbf
+			STD_buffer_scale							1 bslbf
+			STD_buffer_size								13 uimsbf
+		}
+		if (nextbits() == '0010') {
+			'0010'										4 bslbf
+			presentation_time_stamp[32..30]				3 bslbf
+			marker_bit									1 bslbf
+			presentation_time_stamp[29..15]				15 bslbf
+			marker_bit									1 bslbf
+			presentation_time_stamp[14..0]				15 bslbf
+			marker_bit									1 bslbf
+		}
+		else if (nextbits() == '0011') {
+			'0011'										4 bslbf
+			presentation_time_stamp[32..30]				3 bslbf
+			marker_bit									1 bslbf
+			presentation_time_stamp[29..15]				15 bslbf
+			marker_bit									1 bslbf
+			presentation_time_stamp[14..0]				15 bslbf
+			marker_bit									1 bslbf
+			'0001'										4 bslbf
+			decoding_time_stamp[32..30]					3 bslbf
+			marker_bit									1 bslbf
+			decoding_time_stamp[29..15]					15 bslbf
+			marker_bit									1 bslbf
+			decoding_time_stamp[14..0]					15 bslbf
+			marker_bit									1 bslbf
+		}
+		else
+			'0000 1111'									8 bslbf
+	}
+
+	for (i = 0; i < N; i++) {
+		packet_data_byte								8 bslbf
+	}
+}
+*/
+int mpeg2_pes_mpeg1_packet_parse(mpeg2_pes_header *pes_header, uint8_t *buffer, int len, int *media_pos){
+    if(pes_header == NULL){
+        return -1;
+    }
+    if(buffer == NULL){
+        return 0;
+    }
+    int idx = 0;
+    pes_header->packet_start_code_prefix = (buffer[idx] << 16) | (buffer[idx + 1] << 8) | buffer[idx + 2];
+    if(pes_header->packet_start_code_prefix != 0x000001){
+        return -1;
+    }
+    idx += 3;
+    pes_header->stream_id = buffer[idx];
+    if(pes_header->stream_id == PRIVATE_STREAM_2){ // skip
+        *media_pos = 0;
+        return 0;
+    }
+    idx++;
+    pes_header->PES_packet_length = (buffer[idx] << 8) |  buffer[idx + 1];
+    idx += 2;
+    // skip stuffing_byte
+    uint8_t v8;
+    while(1){
+        v8 = buffer[idx];
+        if(v8 != 0xff){
+            break;
+        }
+        idx++;
+    }
+    if(0x40 == (0xC0 & v8)){ // nextbits () == '01'
+        //skip STD_buffer_scale STD_buffer_size
+        idx += 2;
+    }
+    v8 = buffer[idx];
+    if(0x20 == (0xF0 & v8)){ // nextbits() == '0010'
+        /*
+        '0010'										4 bslbf
+        presentation_time_stamp[32..30]				3 bslbf
+        marker_bit									1 bslbf
+        presentation_time_stamp[29..15]				15 bslbf
+        marker_bit									1 bslbf
+        presentation_time_stamp[14..0]				15 bslbf
+        marker_bit									1 bslbf
+        */
+        uint8_t pts1 = buffer[idx];
+        uint16_t pts2 = (buffer[idx + 1] << 8) | buffer[idx + 2];
+        uint16_t pts3 = (buffer[idx + 3] << 8) | buffer[idx + 4];
+        pes_header->dts = pes_header->pts = ((pts1 & 0x0e) << 29) | ((pts2 & 0xfffe) << 14) | ((pts3 & 0xfffe) >> 1);
+
+        idx += 5;
+    }
+    else if(0x30 == (0xF0 & v8)){ // nextbits() == '0011'
+        /*
+        '0011'										4 bslbf
+        presentation_time_stamp[32..30]				3 bslbf
+        marker_bit									1 bslbf
+        presentation_time_stamp[29..15]				15 bslbf
+        marker_bit									1 bslbf
+        presentation_time_stamp[14..0]				15 bslbf
+        marker_bit									1 bslbf
+        '0001'										4 bslbf
+        decoding_time_stamp[32..30]					3 bslbf
+        marker_bit									1 bslbf
+        decoding_time_stamp[29..15]					15 bslbf
+        marker_bit									1 bslbf
+        decoding_time_stamp[14..0]					15 bslbf
+        marker_bit									1 bslbf
+        */
+        uint8_t pts1 = buffer[idx];
+        uint16_t pts2 = (buffer[idx + 1] << 8) | buffer[idx + 2];
+        uint16_t pts3 = (buffer[idx + 3] << 8) | buffer[idx + 4];
+        pes_header->pts = ((pts1 & 0x0e) << 29) | ((pts2 & 0xfffe) << 14) | ((pts3 & 0xfffe) >> 1);
+        int idx_tmp = idx + 5;
+        uint8_t dts1 = buffer[idx_tmp];
+        uint16_t dts2 = (buffer[idx_tmp + 1] << 8) | buffer[idx_tmp + 2];
+        uint16_t dts3 = (buffer[idx_tmp + 3] << 8) | buffer[idx_tmp + 4];
+        pes_header->dts = ((dts1 & 0x0e) << 29) | ((dts2 & 0xfffe) << 14) | ((dts3 & 0xfffe) >> 1);
+        idx += 10;
+    }
+    else{
+        // v8 == '0000 1111'
+        idx++;
+    }
+    *media_pos = idx;
+    return 0;
 }

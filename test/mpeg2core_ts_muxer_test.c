@@ -103,7 +103,7 @@ int ts_muxer_h26x_test(const char *file, int stream_type_h26x){
         printf("create_ts_context error\n");
         exit(0);
     }
-    mpeg2_set_write_callback(context, media_write_callback, ts_fd);
+    mpeg2_ts_set_write_callback(context, media_write_callback, ts_fd);
     if(mpeg2_ts_add_program(context, program_number, NULL, 0) < 0){
         printf("mpeg2_ts_add_program error\n");
         exit(0);
@@ -258,7 +258,7 @@ int ts_muxer_aac_test(const char *file){
         printf("create_ts_context error\n");
         exit(0);
     }
-    mpeg2_set_write_callback(context, media_write_callback, ts_fd);
+    mpeg2_ts_set_write_callback(context, media_write_callback, ts_fd);
     if(mpeg2_ts_add_program(context, program_number, NULL, 0) < 0){
         printf("mpeg2_ts_add_program error\n");
         exit(0);

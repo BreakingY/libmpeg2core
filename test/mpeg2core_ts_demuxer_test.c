@@ -23,7 +23,6 @@ static void video_read_callback(int program_number, int stream_pid, int type, in
         h26x_fd = fopen(h26x_filename, "wb");
     }
     fwrite(data, 1, data_len, h26x_fd);
-    int start_code = get_start_code(data, data_len);
     // printf("pts: %" PRIu64 " dts: %" PRIu64 "\n", pts, dts);
     // printf("data_len: %d\n", data_len);
     return;
@@ -71,6 +70,10 @@ int ts_demuxer_test(int argc, char **argv){
         exit(0);
     }
     FILE *fp = fopen(argv[1], "r");
+    if(fp == NULL){
+        printf("file not exist\n");
+        exit(0);
+    }
     int ts_packet_length = probe_ts_packet_length(fp);
     printf("ts_packet_length:%d\n", ts_packet_length);
     if(ts_packet_length < 0){
@@ -81,7 +84,7 @@ int ts_demuxer_test(int argc, char **argv){
         printf("create_ts_context error\n");
         exit(0);
     }
-    mpeg2_set_read_callback(context, video_read_callback, audio_read_callback, NULL);
+    mpeg2_ts_set_read_callback(context, video_read_callback, audio_read_callback, NULL);
     unsigned char *buffer = (unsigned char *)malloc(ts_packet_length + 1);
     memset(buffer, 0, ts_packet_length + 1);
     int ret;

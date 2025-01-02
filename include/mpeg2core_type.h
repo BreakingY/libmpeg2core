@@ -26,6 +26,10 @@
 #define H264_NAL_PPS            8
 #define H264_NAL_AUD            9
 
+#define DESC_BUFFER_MAX_BYTES   4096
+#define PES_MAX_BYTES       2 * 1024 * 1024
+#define PS_MAX_BYTES        2 * 1024 * 1024
+
 /**
  * TS related definitions
  */
@@ -123,6 +127,19 @@
 /**
  * PS related definitions
  */
-
-
+// The following types only support demuxer, ps muxer(use mpeg2) only support STREAM_TYPE_XXX_XXX
+// only mpeg1 
+#define PRIVATE_STREAM_1   0x1BD
+#define PADDING_STREAM     0x1BE
+#define PRIVATE_STREAM_2   0x1BF
+// mpeg2core_pes.h
+// #define PES_VIDEO           0xe0 // mpeg1 or mpeg2
+// #define PES_VIDEO_PRIVATE   0xef // mpeg1 or mpeg2
+// #define PES_AUDIO           0xc0 // mpeg1 or mpeg2
+// #define PES_AUDIO_PRIVATE   0xdf // mpeg1 or mpeg2
+#define PES_H264_ID  0xe2
+#define PES_AC3_ID   0x80
+#define PES_DTS_ID   0x88
+#define PES_LPCM_ID  0xa0
+#define PES_SUB_ID   0x20
 #endif

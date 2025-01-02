@@ -119,3 +119,29 @@ int mpeg2_h265_new_access_unit(uint8_t *buffer, int len){
     
     return 0;
 }
+
+static uint8_t h264_nalu_aud[6] = {0x00, 0x00, 0x00, 0x01, 0x09, 0xF0};
+static uint8_t h265_nalu_aud[7] = {0x00, 0x00, 0x00, 0x01, 0x46, 0x01, 0x50};
+int mpeg2_add_h264_aud(uint8_t *buffer, int len){
+    if(len < sizeof(h264_nalu_aud)){
+        return 0;
+    }
+    memcpy(buffer, h264_nalu_aud, sizeof(h264_nalu_aud));
+    return sizeof(h264_nalu_aud);
+}
+
+int mpeg2_h264_aud_size(){
+    return sizeof(h264_nalu_aud);
+}
+
+int mpeg2_add_h265_aud(uint8_t *buffer, int len){
+    if(len < sizeof(h265_nalu_aud)){
+        return 0;
+    }
+    memcpy(buffer, h265_nalu_aud, sizeof(h265_nalu_aud));
+    return sizeof(h265_nalu_aud);
+}
+
+int mpeg2_h265_aud_size(){
+    return sizeof(h265_nalu_aud);
+}

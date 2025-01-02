@@ -7,8 +7,10 @@
 #include <inttypes.h>
 
 #define PES_HEADER_MIN_SIZE 9
-#define PES_VIDEO 0xe0
-#define PES_AUDIO 0xc0
+#define PES_VIDEO           0xe0
+#define PES_VIDEO_PRIVATE   0xef
+#define PES_AUDIO           0xc0
+#define PES_AUDIO_PRIVATE   0xdf
 
 typedef struct mpeg2_pes_header_st{
     /* fix */
@@ -69,4 +71,17 @@ int mpeg2_pes_packet_parse(mpeg2_pes_header *pes_header, uint8_t *buffer, int le
  * @param return            bytes(size of pes):ok <0:error
  */
 int mpeg2_pes_packet_pack(mpeg2_pes_header pes_header, uint8_t *buffer, int buffer_len, uint8_t *frame, int frame_len);
+
+/**
+ * PS only
+ */
+/**
+ * parse PES packet
+ * @param[in] pes_header    mpeg2_pes_header
+ * @param[in] buffer        a complete PES packet
+ * @param[in] len           size of buffer
+ * @param[out] media_pos    The starting position of the media in the buffer
+ * @param return            0:ok <0:error
+ */
+int mpeg2_pes_mpeg1_packet_parse(mpeg2_pes_header *pes_header, uint8_t *buffer, int len, int *media_pos);
 #endif

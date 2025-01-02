@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdint.h>
 #include "mpeg2core_ts.h"
+#include "mpeg2core_ps.h"
 /**
  * TS
  */
@@ -119,4 +120,39 @@ int mpeg2_h265_aud_size();
 /**
  * PS
  */
+#define PS_SYSTEM_HEADER_FIXED_LEN  12
+#define PS_PSM_FIXED_LEN            16 // include crc_32
+#define PS_HEADER_STARTCODE         0x000001BA
+#define PS_HEADER_ENDCODE           0x000001B9
+#define PS_SYSTEM_HEADER_STARTCODE  0x000001BB
+// PES level
+#define PES_STARTCODE               0x000001 // include psm
+#define PSM_MAP_STREAM_ID           0xBC
+
+// return bytes:ok <0:error
+int mpeg2_ps_header_parse(uint8_t *buffer, int len, mpeg2_ps_header *ps_header);
+
+// 1: is 0: not
+int mpeg2_is_system_header(uint8_t *buffer, int len);
+
+// return bytes:ok <0:error
+int mpeg2_system_header_parse(uint8_t *buffer, int len, mpeg2_ps_system_header *ps_system_header);
+
+// 1: is psm 0: not is psm
+int mpeg2_is_psm(uint8_t *buffer, int len);
+
+// 1: is pes(psm or media) 0: not is pes
+int mpeg2_is_pes_or_psm(uint8_t *buffer, int len);
+
+// 1: is mpeg1 pes 0: not is mpeg1 pes
+int mpeg2_is_pes_mpeg1(uint8_t *buffer, int len);
+
+// return bytes:ok <0:error
+int mpeg2_psm_parse(uint8_t *buffer, int len, mpeg2_psm *psm);
+
+// 0:ok <0:error
+int mpeg2_ps_media_parse(mpeg2_ps_context *context, uint8_t *pes_buffer, int pes_buffer_len);
+
+// 0:ok <0:error
+int mpeg2_ps_mpeg1_media_parse(mpeg2_ps_context *context, uint8_t *pes_buffer, int pes_buffer_len);
 #endif
