@@ -1,10 +1,11 @@
 # libmpeg2core
 mpeg2 ts ps muxer/demuxer, H264/H265/MPEG1 audio/MP3/AAC/AAC_LATM/G711.
-# TS
+# compile
 * mkdir build
 * cd build
 * cmake ..
 * make -j4
+# TS
 1. demuxer
 * ./mpeg2core_ts_demuxer_test ../media/h264_aac.ts
 * ./mpeg2core_ts_demuxer_test ../media/h265_aac.ts
