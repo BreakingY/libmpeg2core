@@ -141,5 +141,5 @@
 #define PES_AC3_ID   0x80
 #define PES_DTS_ID   0x88
 #define PES_LPCM_ID  0xa0
-#define PES_SUB_ID   0x20
+#define PES_SUB_ID   0x20 // subtitles
 #endif

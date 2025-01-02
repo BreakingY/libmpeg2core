@@ -44,6 +44,18 @@ static void audio_read_callback(int type, int64_t pts, int64_t dts, uint8_t *dat
         case STREAM_TYPE_AUDIO_G711U:
             // printf("STREAM_TYPE_AUDIO_G711U\n");
             break;
+        case PES_AC3_ID: // MPEG1
+            // printf("PES_AC3_ID\n");
+            break;
+        case PES_DTS_ID: // MPEG1
+            // printf("PES_DTS_ID\n");
+            break;
+        case PES_LPCM_ID: // MPEG1
+            // printf("PES_LPCM_ID\n");
+            break;
+        case PES_SUB_ID: // MPEG1 subtitles
+            // printf("PES_SUB_ID\n");
+            break;
         default: // unknow type
             break;
     }
