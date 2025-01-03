@@ -79,7 +79,7 @@ typedef struct mpeg2_ps_header_st{
 // pts dts video timebase: 90000, audio timebase: sampling rate
 typedef void (*PSVideoReadCallback)(int/*STREAM_TYPE_VIDEO_XXX, mpeg2core_type.h, if 0 unknow type*/, int64_t/*pts*/, int64_t/*dts*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
 typedef void (*PSAudioReadCallback)(int/*STREAM_TYPE_AUDIO_XXX, mpeg2core_type.h, if 0 unknow type*/, int64_t/*pts*/, int64_t/*dts*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
-typedef void (*PSMediaWriteCallback)(); 
+typedef void (*PSMediaWriteCallback)(int/*STREAM_TYPE_xxx_xxx, mpeg2core_type.h end of file == 0*/, uint8_t*/*data*/, int/*data_len*/, void*/*user arg*/); 
 enum PS_STAT{
     PS_HEADER = 0,
     PS_STUFFING,
@@ -93,17 +93,30 @@ typedef struct mpeg2_ps_context_st{
     int ps_buffer_pos;
     int ps_buffer_len;
     int demuxer_stat;
-    // build PES
-    // uint8_t pes_buffer_v[PES_MAX_BYTES];
-    // int pes_buffer_pos_v;
-  
-    // uint8_t pes_buffer_a[PES_MAX_BYTES];
-    // int pes_buffer_pos_a;
 
     PSVideoReadCallback video_read_callback;
     PSAudioReadCallback audio_read_callback;
     PSMediaWriteCallback media_write_callback;
     void *arg;
+
+    // muxer only
+    int file_flag;
+    uint8_t frame_buffer[PES_MAX_BYTES]; // video frame cache
+    int frame_buffer_len;
+    // build PES
+    uint8_t pes_buffer_v[PES_MAX_BYTES];
+    int pes_buffer_pos_v;
+  
+    uint8_t pes_buffer_a[PES_MAX_BYTES];
+    int pes_buffer_pos_a;
+    int audio_frame_cnt;
+    int video_frame_cnt;
+    int psm_period;
+    int psm_flag;
+    int key_flag;
+    int write_init;
+    int64_t pts;
+    int64_t dts;
 
 }mpeg2_ps_context;
 
@@ -136,5 +149,41 @@ void mpeg2_ps_set_read_callback(mpeg2_ps_context *context, PSVideoReadCallback v
  * @param return        0:ok <0:error
  */
 int mpeg2_ps_packet_demuxer(mpeg2_ps_context *context, uint8_t *buffer, int len);
+
+/**
+ * PS muxer API, MPEG2 PS
+ * not thread safe
+ */
+/**
+ * set write callback
+ * @param[in] context               created by create_ps_context()
+ * @param[in] media_write_callback  write callback
+ * @param[in] file_flag             1: it's a file, add 0x000001B9 at the end  0: it's a stream
+ * @param[in] arg                   user arg
+ * @param return                    void
+ */
+void mpeg2_ps_set_write_callback(mpeg2_ps_context *context, PSMediaWriteCallback media_write_callback, int file_flag, void *arg);
+
+/**
+ * add one stream
+ * @param[in] context           created by create_ps_context()
+ * @param[in] stream_type       STREAM_TYPE_VIDEO_XXX(mpeg2core_type.h), STREAM_TYPE_AUDIO_XXX(mpeg2core_type.h)
+ * @param[in] stream_info       stream descriptor info // TODO
+ * @param[in] stream_info_len   stream descriptor info len
+ * @param return                0:ok <0:error
+ */
+int mpeg2_ps_add_stream(mpeg2_ps_context *context, int stream_type, uint8_t *stream_info, int stream_info_len);
+
+/**
+ * muxer PS packet
+ * @param[in] context       created by create_ps_context()
+ * @param[in] buffer        video(only one h264 h265 NALU) or audio data
+ * @param[in] len           size of buffer
+ * @param[in] type          stream type, STREAM_TYPE_xxx_xxx, mpeg2core_type.h
+ * @param[in] pts           pts millisecond in video timebase: 90000 or millisecond in audio timebase: sampling rate
+ * @param[in] dts           dts millisecond in video timebase: 90000 or millisecond in audio timebase: sampling rate
+ * @param return            0:ok <0:error
+ */
+int mpeg2_ps_packet_muxer(mpeg2_ps_context *context, uint8_t *buffer, int len, int type, int64_t pts, int64_t dts);
 
 #endif

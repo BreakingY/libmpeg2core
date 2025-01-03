@@ -46,42 +46,6 @@ int mpeg2_ts_video_parse(mpeg2_ts_context *context, int type, int stream_pid){
     context->pes_buffer_pos_v += context->ts_header.payload_len;
     return 0;
 }
-int mpeg2_is_video(int stream_type){
-    switch (stream_type){
-        case STREAM_TYPE_AUDIO_AAC:
-        case STREAM_TYPE_AUDIO_MPEG1:
-        case STREAM_TYPE_AUDIO_MP3:
-        case STREAM_TYPE_AUDIO_AAC_LATM:
-        case STREAM_TYPE_AUDIO_G711A:
-        case STREAM_TYPE_AUDIO_G711U:
-            break;
-        case STREAM_TYPE_VIDEO_H264:
-        case STREAM_TYPE_VIDEO_HEVC:
-            return 1;
-            break;
-        default:
-            break;
-    }
-    return 0;
-}
-int mpeg2_is_audio(int stream_type){
-    switch (stream_type){
-        case STREAM_TYPE_AUDIO_AAC:
-        case STREAM_TYPE_AUDIO_MPEG1:
-        case STREAM_TYPE_AUDIO_MP3:
-        case STREAM_TYPE_AUDIO_AAC_LATM:
-        case STREAM_TYPE_AUDIO_G711A:
-        case STREAM_TYPE_AUDIO_G711U:
-            return 1;
-            break;
-        case STREAM_TYPE_VIDEO_H264:
-        case STREAM_TYPE_VIDEO_HEVC:
-            break;
-        default:
-            break;
-    }
-    return 0;
-}
 int mpeg2_ts_media_pack(mpeg2_ts_context *context, mpeg2_pmt *pmt, mpeg2_pmt_stream *pmt_stream){
     if(!context){
         return -1;

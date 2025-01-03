@@ -71,8 +71,8 @@ int mpeg2_pes_packet_parse(mpeg2_pes_header *pes_header, uint8_t *buffer, int le
     
     return 0;
 }
-int mpeg2_pes_packet_pack(mpeg2_pes_header pes_header, uint8_t *buffer, int buffer_len, uint8_t *frame, int frame_len){
-    if((buffer == NULL) || (frame == NULL) || (buffer_len < PES_HEADER_MIN_SIZE)){
+static int mpeg2_pes_header_pack(mpeg2_pes_header pes_header, uint8_t *buffer, int buffer_len, int first_flag){
+    if((buffer == NULL) || (buffer_len < PES_HEADER_MIN_SIZE)){
         return -1;
     }
     uint8_t flags = 0x00;
@@ -92,8 +92,14 @@ int mpeg2_pes_packet_pack(mpeg2_pes_header pes_header, uint8_t *buffer, int buff
     buffer[idx + 1] = 0;
     idx += 2;
 
-    // 10\PES_scrambling_control:0\PES_priority:0\data_alignment_indicator:1\copyright:0\original_or_copy:0
-    buffer[idx] = 0x84;
+    // 10\PES_scrambling_control:0\PES_priority:0\data_alignment_indicator:first_flag\copyright:0\original_or_copy:0
+    if(first_flag == 1){
+        buffer[idx] = 0x84;
+    }
+    else{
+        buffer[idx] = 0x80;
+    }
+    
     idx++;
     // 7 flags
     buffer[idx] = 0;
@@ -138,14 +144,78 @@ int mpeg2_pes_packet_pack(mpeg2_pes_header pes_header, uint8_t *buffer, int buff
         idx += 5;
 	}
     buffer[PES_header_data_length_idx] = pes_header.PES_header_data_length;
-    if((buffer_len - idx) < frame_len){
-        return 0;
-    }
-    memcpy(buffer + idx, frame, frame_len);
-    idx += frame_len;
     return idx;
 }
-
+static int mpeg2_set_pes_packet_len(uint8_t *buffer, int buffer_len, int packet_length){
+    if((buffer == NULL) || (buffer_len < 6)){
+        return -1;
+    }
+    buffer[4] = (packet_length >> 8) & 0xff;
+    buffer[5] = packet_length & 0xff;
+    return 0;
+}
+int mpeg2_pes_packet_pack(mpeg2_pes_header pes_header, uint8_t *buffer, int buffer_len, uint8_t *frame, int frame_len){
+    if((buffer == NULL) || (frame == NULL)){
+        return -1;
+    }
+    int ret = 0;
+    int left_bytes = 0;
+    int payload_bytes = 0;
+    uint8_t *ptr = frame;
+    int ptr_len = frame_len;
+    int pes_used_bytes = 0;
+    int first_flag = 1;
+    uint8_t *pes_buffer;
+    int pes_buffer_len;
+    int packet_len = 0;
+    if(pes_header.write_packet_length_flag == 0){
+        ret = mpeg2_pes_header_pack(pes_header, buffer, buffer_len, first_flag);
+        if(ret < 0){
+            return -1;
+        }
+        if((ret + frame_len) > buffer_len){
+            return 0;
+        }
+        memcpy(buffer + ret, frame, frame_len);
+        return ret + frame_len;
+    }
+    int i = 0;
+    while(ptr_len > 0){
+        if(ret != 0){
+            first_flag = 0;
+            pes_header.PTS_DTS_flags = 0; // not pts dta
+        }
+        pes_buffer = buffer + pes_used_bytes;
+        pes_buffer_len = buffer_len - pes_used_bytes;
+        ret = mpeg2_pes_header_pack(pes_header, pes_buffer, pes_buffer_len, first_flag);
+        if(ret < 0){
+            return -1;
+        }
+        pes_used_bytes += ret;
+        payload_bytes = PES_PACKET_LENGTH_MAX - ret + 6/*packet_start_code_prefix-->PES_packet_length*/;
+        if(payload_bytes >= ptr_len){
+            packet_len = ret - 6 + ptr_len;
+            if(mpeg2_set_pes_packet_len(pes_buffer, pes_buffer_len, packet_len) < 0){
+                return -1;
+            }
+            memcpy(pes_buffer + ret, ptr, ptr_len);
+            pes_used_bytes += ptr_len;
+            ptr += ptr_len;
+            ptr_len = 0;
+        }
+        else{
+            packet_len = ret - 6 + payload_bytes;
+            if(mpeg2_set_pes_packet_len(pes_buffer, pes_buffer_len, payload_bytes) < 0){
+                return -1;
+            }
+            memcpy(pes_buffer + ret, ptr, payload_bytes);
+            pes_used_bytes += payload_bytes;
+            ptr += payload_bytes;
+            ptr_len -= payload_bytes;
+        }
+    }
+    return pes_used_bytes;
+}
 /**
  * PS only
  */

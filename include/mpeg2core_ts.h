@@ -241,7 +241,7 @@ void mpeg2_ts_set_write_callback(mpeg2_ts_context *context, TSMediaWriteCallback
  * @param[in] len               len of info
  * @param return                0:ok <0:error
  */
-int mpeg2_ts_add_program(mpeg2_ts_context *context, uint16_t program_number, uint8_t* info, int len);
+int mpeg2_ts_add_program(mpeg2_ts_context *context, uint16_t program_number, uint8_t *info, int len);
 
 /**
  * remove one program
@@ -252,7 +252,7 @@ int mpeg2_ts_add_program(mpeg2_ts_context *context, uint16_t program_number, uin
 int mpeg2_ts_remove_program(mpeg2_ts_context *context, uint16_t program_number);
 
 /**
- * remove one program
+ * add one stream for program
  * @param[in] context           created by create_ts_context()
  * @param[in] program_number    program_number(1 2 3 ...) 
  * @param[in] stream_type       STREAM_TYPE_VIDEO_XXX(mpeg2core_type.h), STREAM_TYPE_AUDIO_XXX(mpeg2core_type.h)
@@ -260,7 +260,7 @@ int mpeg2_ts_remove_program(mpeg2_ts_context *context, uint16_t program_number);
  * @param[in] stream_info_len   stream descriptor info len
  * @param return                stream pid:ok <0:error
  */
-int mpeg2_ts_add_program_stream(mpeg2_ts_context *context, uint16_t program_number, int stream_type, uint8_t* stream_info, int stream_info_len);
+int mpeg2_ts_add_program_stream(mpeg2_ts_context *context, uint16_t program_number, int stream_type, uint8_t *stream_info, int stream_info_len);
 
 /**
  * muxer TS packet

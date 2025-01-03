@@ -6,11 +6,12 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-#define PES_HEADER_MIN_SIZE 9
-#define PES_VIDEO           0xe0
-#define PES_VIDEO_PRIVATE   0xef
-#define PES_AUDIO           0xc0
-#define PES_AUDIO_PRIVATE   0xdf
+#define PES_HEADER_MIN_SIZE     9
+#define PES_VIDEO               0xe0
+#define PES_VIDEO_PRIVATE       0xef
+#define PES_AUDIO               0xc0
+#define PES_AUDIO_PRIVATE       0xdf
+#define PES_PACKET_LENGTH_MAX   65535
 
 typedef struct mpeg2_pes_header_st{
     /* fix */
@@ -49,6 +50,9 @@ typedef struct mpeg2_pes_header_st{
     /* PES extension */
 
     /* optional fields 2 */
+
+    // only ps muxer
+    int write_packet_length_flag; // 1:wirte(PS,if don't write PES_packet-length, vlc and libmpeg2core can be parsed, but ffmpeg cannot), 0:ignore(TS)
 }mpeg2_pes_header;
 
 /**

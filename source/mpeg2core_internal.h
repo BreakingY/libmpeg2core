@@ -120,7 +120,8 @@ int mpeg2_h265_aud_size();
 /**
  * PS
  */
-#define PS_SYSTEM_HEADER_FIXED_LEN  12
+#define PS_HEADER_FIXED_HEADER      14 // pack_start_code-->pack_stuffing_length
+#define PS_SYSTEM_HEADER_FIXED_LEN  12 // system_header_start_code-->reserved_bits
 #define PS_PSM_FIXED_LEN            16 // include crc_32
 #define PS_HEADER_STARTCODE         0x000001BA
 #define PS_HEADER_ENDCODE           0x000001B9
@@ -128,7 +129,9 @@ int mpeg2_h265_aud_size();
 // PES level
 #define PES_STARTCODE               0x000001 // include psm
 #define PSM_MAP_STREAM_ID           0xBC
-
+/**
+ * demuxer
+ */
 // return bytes:ok <0:error
 int mpeg2_ps_header_parse(uint8_t *buffer, int len, mpeg2_ps_header *ps_header);
 
@@ -155,4 +158,16 @@ int mpeg2_ps_media_parse(mpeg2_ps_context *context, uint8_t *pes_buffer, int pes
 
 // 0:ok <0:error
 int mpeg2_ps_mpeg1_media_parse(mpeg2_ps_context *context, uint8_t *pes_buffer, int pes_buffer_len);
+
+/**
+ * muxer
+ */
+// return bytes:ok <0:error
+int mpeg2_system_header_pack(uint8_t *buffer, int len, mpeg2_ps_system_header ps_system_header);
+
+// return bytes:ok <0:error
+int mpeg2_psm_pack(uint8_t *buffer, int len, mpeg2_psm psm);
+
+// return bytes:ok <0:error
+int mpeg2_ps_header_pack(uint8_t *buffer, int len, mpeg2_ps_header ps_header, int over_flag);
 #endif

@@ -96,7 +96,6 @@ int ps_demuxer_test(int argc, char **argv){
             printf("mpeg2_ps_packet_demuxer error\n");
             continue;
         }
-
     }
     destroy_ps_context(context);
     if(h26x_fd){

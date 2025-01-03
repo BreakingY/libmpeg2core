@@ -274,7 +274,7 @@ int mpeg2_ts_packet_demuxer(mpeg2_ts_context *context, uint8_t *buffer, int len)
     return 0;
 }
 
-int mpeg2_ts_add_program(mpeg2_ts_context *context, uint16_t program_number, uint8_t* info, int len){
+int mpeg2_ts_add_program(mpeg2_ts_context *context, uint16_t program_number, uint8_t *info, int len){
     if(!context){
         return -1;
     }
@@ -314,7 +314,7 @@ int mpeg2_ts_remove_program(mpeg2_ts_context *context, uint16_t program_number){
     return -1;
 }
 
-int mpeg2_ts_add_program_stream(mpeg2_ts_context *context, uint16_t program_number, int stream_type, uint8_t* stream_info, int stream_info_len){
+int mpeg2_ts_add_program_stream(mpeg2_ts_context *context, uint16_t program_number, int stream_type, uint8_t *stream_info, int stream_info_len){
     if(!context){
         return -1;
     }
