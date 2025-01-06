@@ -4,7 +4,6 @@ project (MPEG2COREPROJ)
 include_directories(./include ./source)
 aux_source_directory(./source SRC)
 
-link_directories(/usr/local/lib /usr/lib)
 set(EXECUTABLE_OUTPUT_PATH ./)
 add_compile_options(-g) 
 set(CMAKE_BUILD_TYPE Debug) # Release
