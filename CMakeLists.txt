@@ -10,7 +10,6 @@ set(CMAKE_BUILD_TYPE Debug) # Release
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ./)
 
 add_library(mpeg2core SHARED ${SRC})
-# target_link_libraries(mpeg2core pthread)
 
 # test
 add_executable(mpeg2core_ts_demuxer_test ./test/mpeg2core_ts_demuxer_test.c)
