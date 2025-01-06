@@ -793,7 +793,5 @@ int mpeg2_ts_packet_muxer(mpeg2_ts_context *context, int stream_pid, uint8_t *bu
     }
     context->psi_flag = 0;
     context->key_flag = 0;
-    context->last_pts = context->pts;
-    context->last_dts = context->dts;
     return 0;
 }

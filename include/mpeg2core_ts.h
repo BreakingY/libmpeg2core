@@ -182,8 +182,6 @@ typedef struct mpeg2_ts_context_st{
     int key_flag; // generate random_access_indicator
     int64_t pts;
     int64_t dts;
-    int64_t last_pts;
-    int64_t last_dts;
     int pcr_period;
     int pat_period;
     int total_streams;
