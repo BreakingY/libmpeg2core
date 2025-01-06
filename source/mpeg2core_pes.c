@@ -174,7 +174,7 @@ int mpeg2_pes_packet_pack(mpeg2_pes_header pes_header, uint8_t *buffer, int buff
             return -1;
         }
         if((ret + frame_len) > buffer_len){
-            return 0;
+            return -1;
         }
         memcpy(buffer + ret, frame, frame_len);
         return ret + frame_len;
@@ -198,6 +198,9 @@ int mpeg2_pes_packet_pack(mpeg2_pes_header pes_header, uint8_t *buffer, int buff
             if(mpeg2_set_pes_packet_len(pes_buffer, pes_buffer_len, packet_len) < 0){
                 return -1;
             }
+            if(ptr_len > (pes_buffer_len - ret)){
+                return -1;
+            }
             memcpy(pes_buffer + ret, ptr, ptr_len);
             pes_used_bytes += ptr_len;
             ptr += ptr_len;
@@ -206,6 +209,9 @@ int mpeg2_pes_packet_pack(mpeg2_pes_header pes_header, uint8_t *buffer, int buff
         else{
             packet_len = ret - 6 + payload_bytes;
             if(mpeg2_set_pes_packet_len(pes_buffer, pes_buffer_len, payload_bytes) < 0){
+                return -1;
+            }
+            if(payload_bytes > (pes_buffer_len - ret)){
                 return -1;
             }
             memcpy(pes_buffer + ret, ptr, payload_bytes);

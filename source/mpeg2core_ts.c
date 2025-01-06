@@ -722,6 +722,9 @@ int mpeg2_ts_packet_muxer(mpeg2_ts_context *context, int stream_pid, uint8_t *bu
                 if(mpeg2_h264_new_access_unit(buffer, len)){
                     context->frame_buffer_len += mpeg2_add_h264_aud(context->frame_buffer + context->frame_buffer_len, sizeof(context->frame_buffer) - context->frame_buffer_len);
                 }
+                if(len > (sizeof(context->frame_buffer) - context->frame_buffer_len)){
+                    return -1;
+                }
                 memcpy(context->frame_buffer + context->frame_buffer_len, buffer, len);
                 context->frame_buffer_len += len; 
                 context->psi_flag = 1;
@@ -738,6 +741,9 @@ int mpeg2_ts_packet_muxer(mpeg2_ts_context *context, int stream_pid, uint8_t *bu
                     if(mpeg2_video_pes_pack(context, pes_header) < 0){
                         return -1;
                     }
+                }
+                if(len > (sizeof(context->frame_buffer) - context->frame_buffer_len)){
+                    return -1;
                 }
                 memcpy(context->frame_buffer + context->frame_buffer_len, buffer, len);
                 context->frame_buffer_len += len;
@@ -761,6 +767,9 @@ int mpeg2_ts_packet_muxer(mpeg2_ts_context *context, int stream_pid, uint8_t *bu
                 if(mpeg2_h265_new_access_unit(buffer, len)){
                     context->frame_buffer_len += mpeg2_add_h265_aud(context->frame_buffer + context->frame_buffer_len, sizeof(context->frame_buffer) - context->frame_buffer_len);
                 }
+                if(len > (sizeof(context->frame_buffer) - context->frame_buffer_len)){
+                    return -1;
+                }
                 memcpy(context->frame_buffer + context->frame_buffer_len, buffer, len);
                 context->frame_buffer_len += len;
                 context->psi_flag = 1;
@@ -777,6 +786,9 @@ int mpeg2_ts_packet_muxer(mpeg2_ts_context *context, int stream_pid, uint8_t *bu
                     if(mpeg2_video_pes_pack(context, pes_header) < 0){
                         return -1;
                     }
+                }
+                if(len > (sizeof(context->frame_buffer) - context->frame_buffer_len)){
+                    return -1;
                 }
                 memcpy(context->frame_buffer + context->frame_buffer_len, buffer, len);
                 context->frame_buffer_len += len;

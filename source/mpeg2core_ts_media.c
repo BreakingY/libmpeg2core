@@ -20,6 +20,9 @@ int mpeg2_ts_audio_parse(mpeg2_ts_context *context, int type, int stream_pid){
         }
         context->pes_buffer_pos_a = 0;
     }
+    if(context->ts_header.payload_len > (sizeof(context->pes_buffer_a) - context->pes_buffer_pos_a)){
+        return -1;
+    }
     memcpy(context->pes_buffer_a + context->pes_buffer_pos_a, context->ts_header.payload, context->ts_header.payload_len);
     context->pes_buffer_pos_a += context->ts_header.payload_len;
     return 0;
@@ -41,6 +44,9 @@ int mpeg2_ts_video_parse(mpeg2_ts_context *context, int type, int stream_pid){
             context->video_read_callback(context->pmt.program_number, stream_pid, type, pes_header.pts, pes_header.dts, context->pes_buffer_v + media_pos, context->pes_buffer_pos_v - media_pos, context->arg);
         }
         context->pes_buffer_pos_v = 0;
+    }
+    if(context->ts_header.payload_len > (sizeof(context->pes_buffer_v) - context->pes_buffer_pos_v)){
+        return -1;
     }
     memcpy(context->pes_buffer_v + context->pes_buffer_pos_v, context->ts_header.payload, context->ts_header.payload_len);
     context->pes_buffer_pos_v += context->ts_header.payload_len;
