@@ -1,5 +1,5 @@
 #include "mpeg2core_internal.h"
-#include "crc32.h"
+#include "mpeg2core_crc32.h"
 #define SERVICE_ENCODER "encoder"
 
 int mpeg2_sdt_parse(mpeg2_ts_context *context){

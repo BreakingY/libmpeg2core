@@ -1,7 +1,7 @@
 #include "mpeg2core_ps.h"
 #include "mpeg2core_internal.h"
 #include "mpeg2core_pes.h"
-#include "crc32.h"
+#include "mpeg2core_crc32.h"
 int mpeg2_psm_parse(uint8_t *buffer, int len, mpeg2_psm *psm){
     memset(psm, 0, sizeof(mpeg2_psm));
     if(!buffer || (len < PS_PSM_FIXED_LEN)){
