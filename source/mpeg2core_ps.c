@@ -33,25 +33,6 @@ void mpeg2_ps_set_write_callback(mpeg2_ps_context *context, PSMediaWriteCallback
     context->file_flag = file_flag;
     return;
 }
-void destroy_ps_context(mpeg2_ps_context *context){
-    if(context){
-        // muxer, end of file
-        mpeg2_ps_header ps_header;
-        memset(&ps_header, 0, sizeof(mpeg2_ps_header));
-        memset(context->ps_buffer, 0, context->ps_buffer_len);
-        ps_header.system_clock_reference_base = context->pts;
-        ps_header.pack_stuffing_length = 0;
-        int used_bytes = mpeg2_ps_header_pack(context->ps_buffer, context->ps_buffer_len, ps_header, 1);
-        if(context->media_write_callback && used_bytes > 0){
-            context->media_write_callback(0, context->ps_buffer, used_bytes, context->arg);
-        }
-        
-        if(context->ps_buffer){
-            free(context->ps_buffer);
-        }
-        free(context);
-    }
-}
 
 void dump_ps_header(mpeg2_ps_header ps_header){
     printf("================== ===ps header====================\n");
@@ -656,6 +637,7 @@ int mpeg2_ps_packet_muxer(mpeg2_ps_context *context, uint8_t *buffer, int len, i
         case STREAM_TYPE_AUDIO_AAC_LATM:
         case STREAM_TYPE_AUDIO_G711A:
         case STREAM_TYPE_AUDIO_G711U:
+            context->psm_stream_audio = *psm_stream;
             pes_header.PTS_DTS_flags = 2; // only pts
             pes_header.dts = 0;
             context->dts = 0;
@@ -666,6 +648,7 @@ int mpeg2_ps_packet_muxer(mpeg2_ps_context *context, uint8_t *buffer, int len, i
             context->key_flag = 1;
             break;
         case STREAM_TYPE_VIDEO_H264:
+            context->psm_stream_video = *psm_stream;
             start_code = get_start_code(buffer, len);
             video_nalu_type = buffer[start_code] & 0x1f;
             if(video_nalu_type == H264_NAL_AUD){ // skip AUD
@@ -710,6 +693,7 @@ int mpeg2_ps_packet_muxer(mpeg2_ps_context *context, uint8_t *buffer, int len, i
             }
             break;
         case STREAM_TYPE_VIDEO_HEVC:
+            context->psm_stream_video = *psm_stream;
             start_code = get_start_code(buffer, len);
             video_nalu_type = (buffer[start_code] >> 1) & 0x3f;
             if(video_nalu_type == H265_NAL_AUD){ // skip AUD
@@ -766,5 +750,51 @@ int mpeg2_ps_packet_muxer(mpeg2_ps_context *context, uint8_t *buffer, int len, i
     context->psm_flag = 0;
     context->key_flag = 0;
     return 0;
+}
+static int mpeg2_ps_muxer_cache_clean(mpeg2_ps_context *context){
+    if(!context){
+        return -1;
+    }
+    if(context->frame_buffer_len <= 0){
+        return 0;
+    }
+    mpeg2_pes_header pes_header;
+    memset(&pes_header, 0, sizeof(mpeg2_pes_header));
+    pes_header.PTS_DTS_flags = 3; // 3:pts + dts 2:pts
+    pes_header.pts = context->pts;
+    pes_header.dts = context->dts;
+    pes_header.stream_id = PES_VIDEO;
+    context->pes_buffer_pos_v = mpeg2_pes_packet_pack(pes_header, context->pes_buffer_v, sizeof(context->pes_buffer_v), context->frame_buffer, context->frame_buffer_len);
+    if(context->pes_buffer_pos_v < 0){
+        return -1;
+    }
+    context->video_frame_cnt++;
+    context->frame_buffer_len = 0;
+    if(mpeg2_ps_pack(context, context->psm_stream_video.stream_type, context->psm_flag) < 0){;
+        return -1;
+    }
+    return 0;
+}
+void destroy_ps_context(mpeg2_ps_context *context){
+    if(!context){
+        return;
+    }
+    // muxer cache cleaning
+    mpeg2_ps_muxer_cache_clean(context);
+    // muxer, end of file
+    mpeg2_ps_header ps_header;
+    memset(&ps_header, 0, sizeof(mpeg2_ps_header));
+    memset(context->ps_buffer, 0, context->ps_buffer_len);
+    ps_header.system_clock_reference_base = context->pts;
+    ps_header.pack_stuffing_length = 0;
+    int used_bytes = mpeg2_ps_header_pack(context->ps_buffer, context->ps_buffer_len, ps_header, 1);
+    if(context->media_write_callback && used_bytes > 0){
+        context->media_write_callback(0, context->ps_buffer, used_bytes, context->arg);
+    }
+    if(context->ps_buffer){
+        free(context->ps_buffer);
+    }
+    free(context);
+    
 }
 

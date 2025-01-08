@@ -151,6 +151,8 @@ typedef struct mpeg2_ts_context_st{
     int pmt_array_num;
     int current_pmt_idx;
     mpeg2_pmt pmt; // The currently unpacked program
+    mpeg2_pmt_stream pmt_stream_video; // The currently video stream
+    mpeg2_pmt_stream pmt_stream_audio; // The currently audio stream
 
     // rebuild section
     mpeg2_section_header section_header; // the section header of the current TS packet

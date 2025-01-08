@@ -35,7 +35,43 @@ void mpeg2_ts_set_write_callback(mpeg2_ts_context *context, TSMediaWriteCallback
     context->arg = arg;
     return;
 }
+static int mpeg2_ts_demuxer_cache_clean(mpeg2_ts_context *context){
+    if(context == NULL){
+        return -1;
+    }
+    int type;
+    int stream_pid;
+    mpeg2_pes_header pes_header;
+    int media_pos;
+    if(context->pes_buffer_a > 0){
+        type = context->pmt_stream_audio.stream_type;
+        stream_pid = context->pmt_stream_audio.elementary_PID;
+        media_pos = 0;
+        if(mpeg2_pes_packet_parse(&pes_header, context->pes_buffer_a, context->pes_buffer_pos_a, &media_pos) < 0){
+            return -1;
+        }
+        if(context->audio_read_callback && (media_pos > 0)){
+            context->audio_read_callback(context->pmt.program_number, stream_pid, type, pes_header.pts, pes_header.dts, context->pes_buffer_a + media_pos, context->pes_buffer_pos_a - media_pos, context->arg);
+        }
+        context->pes_buffer_pos_a = 0;
+    }
+    if(context->pes_buffer_v > 0){
+        type = context->pmt_stream_video.stream_type;
+        stream_pid = context->pmt_stream_video.elementary_PID;
+        media_pos = 0;
+        if(mpeg2_pes_packet_parse(&pes_header, context->pes_buffer_v, context->pes_buffer_pos_v, &media_pos) < 0){
+            return -1;
+        }
+        if(context->video_read_callback && (media_pos > 0)){
+            context->video_read_callback(context->pmt.program_number, stream_pid, type, pes_header.pts, pes_header.dts, context->pes_buffer_v + media_pos, context->pes_buffer_pos_v - media_pos, context->arg);
+        }
+        context->pes_buffer_pos_v = 0;
+    }
+    return 0;
+}
 void destroy_ts_context(mpeg2_ts_context *context){
+    // demuxer cache cleaning
+    mpeg2_ts_demuxer_cache_clean(context);
     if(context){
         free(context);
     }
@@ -255,12 +291,14 @@ int mpeg2_ts_packet_demuxer(mpeg2_ts_context *context, uint8_t *buffer, int len)
                 case STREAM_TYPE_AUDIO_AAC_LATM:
                 case STREAM_TYPE_AUDIO_G711A:
                 case STREAM_TYPE_AUDIO_G711U:
+                    context->pmt_stream_audio = pmt_stream;
                     if(mpeg2_ts_audio_parse(context, pmt_stream.stream_type, pmt_stream.elementary_PID) < 0){
                         return -1;
                     }
                     break;
                 case STREAM_TYPE_VIDEO_H264:
                 case STREAM_TYPE_VIDEO_HEVC:
+                    context->pmt_stream_video = pmt_stream;
                     if(mpeg2_ts_video_parse(context, pmt_stream.stream_type, pmt_stream.elementary_PID) < 0){
                         return -1;
                     }
@@ -295,10 +333,40 @@ int mpeg2_ts_add_program(mpeg2_ts_context *context, uint16_t program_number, uin
 
     return 0;
 }
-
+static int mpeg2_ts_muxer_cache_clean(mpeg2_ts_context *context){ // only video
+    if(context == NULL){
+        return -1;
+    }
+    if(context->frame_buffer_len <= 0){
+        return 0;
+    }
+    mpeg2_pes_header pes_header;
+    memset(&pes_header, 0, sizeof(mpeg2_pes_header));
+    pes_header.PTS_DTS_flags = 3; // 3:pts + dts 2:pts
+    pes_header.pts = context->pts;
+    pes_header.dts = context->dts;
+    pes_header.stream_id = PES_VIDEO;
+    context->pes_buffer_pos_v = mpeg2_pes_packet_pack(pes_header, context->pes_buffer_v, sizeof(context->pes_buffer_v), context->frame_buffer, context->frame_buffer_len);
+    if(context->pes_buffer_pos_v < 0){
+        return -1;
+    }
+    context->video_frame_cnt++;
+    context->frame_buffer_len = 0;
+    if(mpeg2_ts_media_pack(context, &context->pmt, &context->pmt_stream_video) < 0){
+        return -1;
+    }
+    return 0;
+}
 int mpeg2_ts_remove_program(mpeg2_ts_context *context, uint16_t program_number){
     if(!context){
         return -1;
+    }
+    if(program_number == context->pmt.program_number){
+        // muxer cache cleaning
+        int ret = mpeg2_ts_muxer_cache_clean(context);
+        if(ret < 0){
+            return -1;
+        }
     }
     for(int i = 0; i < context->pat.program_array_num; i++){
         if(context->pat.program_array[i].program_number == program_number){
@@ -679,6 +747,7 @@ int mpeg2_ts_packet_muxer(mpeg2_ts_context *context, int stream_pid, uint8_t *bu
     if(pmt_stream->stream_type != type || pmt_stream->elementary_PID != stream_pid){
         return -1;
     }
+    context->pmt = *pmt;
     context->pts = pts;
     context->dts = dts;
     mpeg2_pes_header pes_header;
@@ -696,6 +765,7 @@ int mpeg2_ts_packet_muxer(mpeg2_ts_context *context, int stream_pid, uint8_t *bu
         case STREAM_TYPE_AUDIO_AAC_LATM:
         case STREAM_TYPE_AUDIO_G711A:
         case STREAM_TYPE_AUDIO_G711U:
+            context->pmt_stream_audio = *pmt_stream;
             pes_header.PTS_DTS_flags = 2; // only pts
             pes_header.dts = 0;
             context->dts = 0;
@@ -706,6 +776,7 @@ int mpeg2_ts_packet_muxer(mpeg2_ts_context *context, int stream_pid, uint8_t *bu
             context->key_flag = 1;
             break;
         case STREAM_TYPE_VIDEO_H264:
+            context->pmt_stream_video = *pmt_stream;
             start_code = get_start_code(buffer, len);
             video_nalu_type = buffer[start_code] & 0x1f;
             if(video_nalu_type == H264_NAL_AUD){ // skip AUD
@@ -750,6 +821,7 @@ int mpeg2_ts_packet_muxer(mpeg2_ts_context *context, int stream_pid, uint8_t *bu
             }
             break;
         case STREAM_TYPE_VIDEO_HEVC:
+            context->pmt_stream_video = *pmt_stream;
             start_code = get_start_code(buffer, len);
             video_nalu_type = (buffer[start_code] >> 1) & 0x3f;
             if(video_nalu_type == H265_NAL_AUD){ // skip AUD

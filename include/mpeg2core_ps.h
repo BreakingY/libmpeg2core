@@ -88,6 +88,8 @@ enum PS_STAT{
 typedef struct mpeg2_ps_context_st{
     mpeg2_ps_system_header ps_system_header;
     mpeg2_psm psm;
+    mpeg2_psm_stream psm_stream_audio; // The currently audio stream, muxer
+    mpeg2_psm_stream psm_stream_video; // The currently video stream, muxer
     mpeg2_ps_header ps_header;
     uint8_t *ps_buffer;
     int ps_buffer_pos;
