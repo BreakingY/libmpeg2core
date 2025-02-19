@@ -1,5 +1,5 @@
 # libmpeg2core
-mpeg2 ts ps muxer/demuxer, H264/H265/MPEG1 audio/MP3/AAC/AAC_LATM/G711.
+mpeg2 ts ps muxer/demuxer, H264/H265/MPEG1 AUDIO/MP3/AAC/AAC_LATM/G711.
 # compile
 * mkdir build
 * cd build
@@ -22,3 +22,4 @@ mpeg2 ts ps muxer/demuxer, H264/H265/MPEG1 audio/MP3/AAC/AAC_LATM/G711.
 * ./mpeg2core_ps_muxer_test ../media/test.h264 0
 * ./mpeg2core_ps_muxer_test ../media/test.h265 1
 * ./mpeg2core_ps_muxer_test ../media/test.aac 2
+* ./mpeg2core_ps_muxer_test_av(Audio and video, for testing purposes only, without audio and video synchronization)

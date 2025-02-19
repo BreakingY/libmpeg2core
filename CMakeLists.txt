@@ -23,3 +23,6 @@ target_link_libraries(mpeg2core_ps_demuxer_test mpeg2core)
 
 add_executable(mpeg2core_ps_muxer_test ./test/mpeg2core_ps_muxer_test.c)
 target_link_libraries(mpeg2core_ps_muxer_test mpeg2core)
+
+add_executable(mpeg2core_ps_muxer_test_av ./test/mpeg2core_ps_muxer_test_av.c)
+target_link_libraries(mpeg2core_ps_muxer_test_av mpeg2core)
