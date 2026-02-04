@@ -282,7 +282,7 @@ int ps_muxer_aac_test(const char *file){
             printf("mpeg2_ps_packet_muxer error\n");
         }
         // fwrite(frame, 1, header.aac_frame_length, aac_fd);
-        pts += 2048; // timebase-->sample
+        pts += time_base_convert((1024 * 1000 / 44100), 90000);
         dts = pts;
         // printf("pts:%lld time_base_convert(pts, sample):%lld\n",pts, time_base_convert(pts, sample));
     }

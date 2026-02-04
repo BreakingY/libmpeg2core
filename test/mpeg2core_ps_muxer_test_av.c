@@ -242,7 +242,7 @@ int ps_muxer_h264_aac_test(){
             printf("mpeg2_ps_packet_muxer error\n");
         }
         // fwrite(frame, 1, header.aac_frame_length, aac_fd);
-        pts_a += 2048; // timebase-->sample
+        pts_a += time_base_convert((1024 * 1000 / 44100), 90000);
         dts_a = pts_a;
         frames_a++;
     }
