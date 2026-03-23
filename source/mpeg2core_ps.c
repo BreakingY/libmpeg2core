@@ -576,7 +576,7 @@ static int mpeg2_ps_pack(mpeg2_ps_context *context, int stream_type, int psm_fla
             return -1;
         }
         used_bytes += pack_ret;
-        context->write_init == 1;
+        context->write_init = 1;
     }
     int left_bytes = context->ps_buffer_len - used_bytes;
     switch (stream_type){
